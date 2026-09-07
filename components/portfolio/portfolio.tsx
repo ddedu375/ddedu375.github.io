@@ -721,14 +721,12 @@ function PortfolioContent() {
         showCloseButton={false}
         finalFocus={openerRef}
       >
-        <button
+        <DialogClose
           className="sheet-handle"
-          type="button"
-          onClick={() => setPanel(null)}
           aria-label="Закрыть окно"
         >
           <span />
-        </button>
+        </DialogClose>
         <div className="modal-heading">
           <DialogTitle className="modal-title">
             {renderedPanel === 'contacts' ? 'Контакты' : `${profile.name}, ${preview.id === 'character-3' ? '7 лет' : '21 год'}`}
