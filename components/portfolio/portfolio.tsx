@@ -47,20 +47,56 @@ import { usePreferences } from './use-preferences';
 
 type Panel = 'contacts' | 'customize' | null;
 
-function CharacterVideo({
-  source,
-  poster,
-  className,
-  slowEnd = true,
-  onEnded,
-}: {
-  source: string | null;
-  poster: string | null;
+type CharacterMedia = { source: string | null; poster: string | null };
+
+function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: CharacterMedia & {
   className: string;
   slowEnd?: boolean;
   onEnded?: () => void;
 }) {
+  const [shown, setShown] = useState<CharacterMedia>({ source, poster });
+  const pending = source !== shown.source;
+  const layers = pending && shown.source ? [shown, { source, poster }] : [{ source, poster }];
+
+  return source ? (
+    <div className={`${className} character-video`}>
+      {layers.map((media) => media.source && (
+        <CharacterVideoLayer
+          key={media.source}
+          source={media.source}
+          poster={media.poster}
+          visible={media.source === shown.source || !shown.source}
+          slowEnd={media.source === source && slowEnd}
+          onReady={media.source === source ? () => setShown(media) : undefined}
+          onEnded={media.source === source ? onEnded : undefined}
+        />
+      ))}
+    </div>
+  ) : (
+    <div className={`${className} placeholder`}>
+      <span className="sr-only">Видео персонажа пока не добавлено</span>
+    </div>
+  );
+}
+
+function CharacterVideoLayer({ source, poster, visible, slowEnd, onReady, onEnded }: {
+  source: string;
+  poster: string | null;
+  visible: boolean;
+  slowEnd: boolean;
+  onReady?: () => void;
+  onEnded?: () => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const readyRef = useRef(onReady);
+  const decodedFrame = useRef<number | null>(null);
+  useLayoutEffect(() => { readyRef.current = onReady; }, [onReady]);
+  useEffect(() => {
+    const video = videoRef.current;
+    return () => {
+      if (video && decodedFrame.current !== null) video.cancelVideoFrameCallback?.(decodedFrame.current);
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -94,23 +130,31 @@ function CharacterVideo({
     };
   }, [source, slowEnd]);
 
-  return source ? (
+  return (
     <video
-      key={source}
       ref={videoRef}
-      className={className}
       src={source}
       poster={poster ?? undefined}
+      style={{ visibility: visible ? 'visible' : 'hidden' }}
+      preload="auto"
       autoPlay
       muted
+      onLoadedData={() => {
+        const video = videoRef.current;
+        if (!video) return;
+        if (video.requestVideoFrameCallback) {
+          decodedFrame.current = video.requestVideoFrameCallback(() => {
+            decodedFrame.current = null;
+            readyRef.current?.();
+          });
+        } else {
+          readyRef.current?.();
+        }
+      }}
       onEnded={onEnded}
       playsInline
       aria-label="Видео персонажа"
     />
-  ) : (
-    <div className={`${className} placeholder`}>
-      <span className="sr-only">Видео персонажа пока не добавлено</span>
-    </div>
   );
 }
 
