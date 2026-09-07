@@ -28,6 +28,14 @@ export const characters: Character[] = [
   { id: 'character-2', name: 'Владивосток 2000', video: '/videos/vladivostok-light-idle.webm', poster: '/videos/vladivostok-light-idle.png', darkVideo: '/videos/vladivostok-dark-idle.webm', darkPoster: '/videos/vladivostok-dark-idle.png', darkTransitionVideo: '/videos/vladivostok-dark-switch.webm', darkTransitionPoster: '/videos/vladivostok-dark-switch.png', unlock: null },
   { id: 'character-3', name: 'Обратно в 1 класс', video: '/videos/school-light-idle.webm', poster: '/videos/school-light-idle.png', darkVideo: '/videos/school-dark-idle-short.webm', darkPoster: '/videos/school-dark-idle-short.png', darkTransitionVideo: '/videos/school-dark-switch-hair.webm', darkTransitionPoster: '/videos/school-dark-switch-hair.png', unlock: 'message' },
 ];
+export const safariVideoSources: Record<string, string> = {
+  '/videos/corporate-idle-stable.webm': '/videos/corporate-idle-stable.mov',
+  '/videos/corporate-dark-idle.webm': '/videos/corporate-dark-idle.mov',
+  '/videos/vladivostok-light-idle.webm': '/videos/vladivostok-light-idle.mov',
+  '/videos/vladivostok-dark-idle.webm': '/videos/vladivostok-dark-idle.mov',
+  '/videos/school-light-idle.webm': '/videos/school-light-idle.mov',
+  '/videos/school-dark-idle-short.webm': '/videos/school-dark-idle-short.mov',
+};
 export const description =
   'Весь последний год работал над улучшением пользовательского опыта при использовании статистики в Avito';
 export const projects = [

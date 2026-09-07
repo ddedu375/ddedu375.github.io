@@ -39,6 +39,7 @@ import {
   characters,
   description,
   profile,
+  safariVideoSources,
   projects,
   unlockMessage,
 } from '@/lib/portfolio';
@@ -140,7 +141,6 @@ function CharacterVideoLayer({ source, poster, visible, slowEnd, onReady, onEnde
   return (
     <video
       ref={videoRef}
-      src={source}
       poster={poster ?? undefined}
       style={{ opacity: visible ? 1 : 0 }}
       preload="auto"
@@ -161,7 +161,12 @@ function CharacterVideoLayer({ source, poster, visible, slowEnd, onReady, onEnde
       onEnded={onEnded}
       playsInline
       aria-label="Видео персонажа"
-    />
+    >
+      {safariVideoSources[source] && (
+        <source src={safariVideoSources[source]} type='video/quicktime; codecs="hvc1"' />
+      )}
+      <source src={source} type="video/webm" />
+    </video>
   );
 }
 

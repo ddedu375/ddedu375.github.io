@@ -27,6 +27,10 @@ export function usePaperEraser(onReveal: () => void) {
     let lastParticle = 0;
     let revealed = false;
     let unlocked = false;
+    let disposed = false;
+    let maskRevision = 0;
+    let maskInitialized = false;
+
     const checkProgress = () => {
       if (unlocked) return;
       const pixels = context.getImageData(0, 0, mask.width, mask.height).data;
@@ -38,8 +42,17 @@ export function usePaperEraser(onReveal: () => void) {
       }
     };
     const paintMask = () => {
-      const image = `url("${mask.toDataURL()}")`;
-      layer.style.maskImage = image;
+      const revision = ++maskRevision;
+      const image = new Image();
+      image.src = mask.toDataURL();
+      // Keep the old, decoded mask visible until the next one is ready.
+      void image.decode().then(() => {
+        if (disposed || revision !== maskRevision) return;
+
+        const url = `url("${image.src}")`;
+        layer.style.setProperty('-webkit-mask-image', url);
+        layer.style.maskImage = url;
+      }).catch(() => {});
     };
     const resize = () => {
       const width = area.clientWidth;
@@ -48,10 +61,11 @@ export function usePaperEraser(onReveal: () => void) {
       const saved = document.createElement('canvas');
       saved.width = mask.width; saved.height = mask.height;
       saved.getContext('2d')?.drawImage(mask, 0, 0);
-      const hadMask = layer.style.maskImage !== '';
+      const hadMask = maskInitialized;
       mask.width = width; mask.height = height;
       if (hadMask) context.drawImage(saved, 0, 0, width, height);
       else { context.fillStyle = '#fff'; context.fillRect(0, 0, width, height); }
+      maskInitialized = true;
       previous = null;
       paintMask();
     };
@@ -158,6 +172,7 @@ export function usePaperEraser(onReveal: () => void) {
     area.addEventListener('pointercancel', reset);
     area.addEventListener('keydown', reveal);
     return () => {
+      disposed = true;
       reset(); observer.disconnect(); sound.dispose();
       particles.forEach((particle) => particle.remove());
       area.removeEventListener('pointermove', move);
