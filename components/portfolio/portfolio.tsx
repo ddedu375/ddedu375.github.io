@@ -314,11 +314,11 @@ function PortfolioContent() {
             event.target.closest('input,textarea,select')))
       )
         return;
-      if (event.key.toLowerCase() === 'c' || event.key.toLowerCase() === 'с') {
+      if (event.code === 'KeyC' || ['c', 'с', 'ц'].includes(event.key.toLowerCase())) {
         event.preventDefault();
         openPanel('contacts');
       }
-      if (event.key.toLowerCase() === 'r' || event.key.toLowerCase() === 'к') {
+      if (event.code === 'KeyR' || event.key.toLowerCase() === 'r' || event.key.toLowerCase() === 'к') {
         event.preventDefault();
         window.open(profile.resumeUrl, '_blank', 'noopener,noreferrer');
       }
