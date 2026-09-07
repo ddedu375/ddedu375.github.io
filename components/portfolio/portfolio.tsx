@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
+import Image from 'next/image';
 import { LockKeyhole, Send } from 'lucide-react';
 import { ThemeIcon } from './theme-icon';
 import { animate, motion, useAnimationControls, useReducedMotion, type AnimationPlaybackControls } from 'motion/react';
@@ -34,6 +35,7 @@ import {
 } from '@/components/ui/toast';
 import {
   applyCharacter,
+  initialPreferences,
   characters,
   description,
   profile,
@@ -49,20 +51,59 @@ function CharacterVideo({
   source,
   poster,
   className,
+  slowEnd = true,
+  onEnded,
 }: {
   source: string | null;
   poster: string | null;
   className: string;
+  slowEnd?: boolean;
+  onEnded?: () => void;
 }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !slowEnd) return;
+    let frame = 0;
+    const stop = () => cancelAnimationFrame(frame);
+    const update = () => {
+      if (video.paused || video.ended) return;
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        const slowdownDuration = Math.min(1.2, video.duration / 2);
+        const progress = Math.max(0, Math.min(1, 1 - (video.duration - video.currentTime) / slowdownDuration));
+        const eased = progress * progress * (3 - 2 * progress);
+        video.playbackRate = 1 - 0.85 * eased;
+      }
+      frame = requestAnimationFrame(update);
+    };
+    const start = () => {
+      stop();
+      update();
+    };
+    video.addEventListener('play', start);
+    video.addEventListener('pause', stop);
+    video.addEventListener('ended', stop);
+    start();
+    return () => {
+      stop();
+      video.removeEventListener('play', start);
+      video.removeEventListener('pause', stop);
+      video.removeEventListener('ended', stop);
+      video.playbackRate = 1;
+    };
+  }, [source, slowEnd]);
+
   return source ? (
     <video
       key={source}
+      ref={videoRef}
       className={className}
       src={source}
       poster={poster ?? undefined}
       autoPlay
       muted
-      loop
+      onEnded={onEnded}
       playsInline
       aria-label="Видео персонажа"
     />
@@ -153,6 +194,8 @@ function PortfolioContent() {
   };
 
   const [prefs, setPrefs] = usePreferences();
+  const [darkTransition, setDarkTransition] = useState(false);
+  const playingDarkTransition = prefs.theme === 'dark' && darkTransition && (prefs.character === 'corporate' || !!characters.find((character) => character.id === prefs.character)?.darkTransitionVideo);
   const [panel, setPanel] = useState<Panel>(null);
   const [sticky, setSticky] = useState(false);
   const [navigation, setNavigation] = useState({
@@ -189,7 +232,7 @@ function PortfolioContent() {
           onClick: () => {
             clearTimeout(toastDismiss.current);
             close(toastId);
-            setCarouselStart(1); setSelected(1); setPanel('customize');
+            setCarouselStart(2); setSelected(2); setPanel('customize');
           },
         },
       });
@@ -214,7 +257,7 @@ function PortfolioContent() {
         setCopyState(null);
         setCarouselStart(0);
         setSelected(0);
-        setPrefs((previous) => ({ ...previous, unlocked: ['corporate'], character: 'corporate' }));
+        setPrefs((previous) => ({ ...previous, unlocked: [...initialPreferences.unlocked], character: initialPreferences.character }));
       }
     };
     window.addEventListener('keydown', debugToast);
@@ -337,6 +380,9 @@ function PortfolioContent() {
     window.addEventListener('keydown', shortcuts);
     return () => window.removeEventListener('keydown', shortcuts);
   }, [panel, openPanel]);
+  useLayoutEffect(() => {
+    if (panel === 'customize') carousel?.scrollTo(carouselStart, true);
+  }, [carousel, carouselStart, panel]);
   useEffect(() => {
     if (!carousel) return;
     let current = carousel.selectedScrollSnap();
@@ -480,6 +526,7 @@ function PortfolioContent() {
               }
               onClick={() => {
                 playUISound('toggle');
+                setDarkTransition(prefs.theme === 'light');
                 setPrefs((previous) => ({
                   ...previous,
                   theme: previous.theme === 'light' ? 'dark' : 'light',
@@ -492,8 +539,10 @@ function PortfolioContent() {
           <div className="portrait-entry">
             <CharacterVideo
               className="portrait"
-              source={current?.video ?? profile.defaultVideo}
-              poster={current?.poster ?? profile.defaultPoster}
+              slowEnd={!playingDarkTransition}
+              onEnded={() => setDarkTransition(false)}
+              source={playingDarkTransition ? current?.darkTransitionVideo ?? profile.darkTransitionVideo : prefs.theme === 'dark' ? current?.darkVideo ?? current?.video ?? profile.defaultDarkVideo : current?.video ?? profile.defaultVideo}
+              poster={playingDarkTransition ? current?.darkTransitionPoster ?? profile.darkTransitionPoster : prefs.theme === 'dark' ? current?.darkPoster ?? current?.poster ?? profile.defaultDarkPoster : current?.poster ?? profile.defaultPoster}
             />
           </div>
           <div className="bio text-block">
@@ -668,7 +717,7 @@ function PortfolioContent() {
               </output>
             )}
             <ContactPaper onReveal={() => {
-              if (prefs.unlocked.includes('character-2')) return;
+              if (prefs.unlocked.includes('character-3')) return;
               setPrefs((previous) => unlockMessage(previous));
               showUnlockToast();
             }} />
@@ -677,9 +726,9 @@ function PortfolioContent() {
           <>
             <div className="character-preview">
               <CharacterVideo
-                className="character-preview-media"
-                source={preview.video}
-                poster={preview.poster}
+                className={`character-preview-media${canApply ? '' : ' is-locked'}`}
+                source={prefs.theme === 'dark' ? preview.darkVideo ?? preview.video : preview.video}
+                poster={prefs.theme === 'dark' ? preview.darkPoster ?? preview.poster : preview.poster}
               />
             </div>
             <div className="style-controls">
@@ -706,7 +755,19 @@ function PortfolioContent() {
                         }}
                         aria-label={`${character.name}${prefs.unlocked.includes(character.id) ? '' : ', закрыт'}`}
                         aria-pressed={selected === index}
-                      />
+                      >
+                        {(prefs.theme === 'dark' ? character.darkPoster ?? character.poster : character.poster) && (
+                          <Image
+                            width={64}
+                            height={64}
+                            unoptimized
+                            className={`character-tile-image${prefs.unlocked.includes(character.id) ? '' : ' is-locked'}`}
+                            src={(prefs.theme === 'dark' ? character.darkPoster ?? character.poster : character.poster) ?? ''}
+                            alt=""
+                            draggable={false}
+                          />
+                        )}
+                      </button>
                     </CarouselItem>
                   ))}
                 </CarouselContent>

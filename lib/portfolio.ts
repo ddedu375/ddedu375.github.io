@@ -3,6 +3,10 @@ export type Character = {
   name: string;
   video: string | null;
   poster: string | null;
+  darkVideo?: string;
+  darkPoster?: string;
+  darkTransitionVideo?: string;
+  darkTransitionPoster?: string;
   unlock: 'message' | null;
 };
 export const profile = {
@@ -12,12 +16,17 @@ export const profile = {
   telegram: '@daniladedu',
   telegramUrl: 'https://t.me/daniladedu',
   resumeUrl: '/resume',
-  defaultVideo: null as string | null,
-  defaultPoster: null as string | null,
+  defaultVideo: '/videos/corporate-idle-stable.webm' as string | null,
+  defaultPoster: '/videos/corporate-idle-stable.png' as string | null,
+  darkTransitionVideo: '/videos/corporate-dark-switch.webm',
+  darkTransitionPoster: '/videos/corporate-dark-switch.png',
+  defaultDarkVideo: '/videos/corporate-dark-idle.webm',
+  defaultDarkPoster: '/videos/corporate-dark-idle.png',
 };
 export const characters: Character[] = [
-  { id: 'corporate', name: 'Корпорат', video: '/videos/corporate.mp4', poster: null, unlock: null },
-  { id: 'character-2', name: 'Стиль 2', video: null, poster: null, unlock: 'message' },
+  { id: 'corporate', name: 'Корпорат', video: '/videos/corporate-idle-stable.webm', poster: '/videos/corporate-idle-stable.png', darkVideo: '/videos/corporate-dark-idle.webm', darkPoster: '/videos/corporate-dark-idle.png', unlock: null },
+  { id: 'character-2', name: 'Владивосток 2000', video: '/videos/vladivostok-light-idle.webm', poster: '/videos/vladivostok-light-idle.png', darkVideo: '/videos/vladivostok-dark-idle.webm', darkPoster: '/videos/vladivostok-dark-idle.png', darkTransitionVideo: '/videos/vladivostok-dark-switch.webm', darkTransitionPoster: '/videos/vladivostok-dark-switch.png', unlock: null },
+  { id: 'character-3', name: 'Обратно в 1 класс', video: '/videos/school-light-idle.webm', poster: '/videos/school-light-idle.png', darkVideo: '/videos/school-dark-idle-short.webm', darkPoster: '/videos/school-dark-idle-short.png', darkTransitionVideo: '/videos/school-dark-switch-hair.webm', darkTransitionPoster: '/videos/school-dark-switch-hair.png', unlock: 'message' },
 ];
 export const description =
   'Весь последний год работал над улучшением пользовательского опыта при использовании статистики в Avito';
@@ -33,33 +42,36 @@ export type Preferences = {
   theme: 'light' | 'dark';
   unlocked: string[];
   character: string | null;
+  unlockVersion: number;
 };
 export const initialPreferences: Preferences = {
   theme: 'light',
-  unlocked: ['corporate'],
+  unlocked: ['corporate', 'character-2'],
   character: 'corporate',
+  unlockVersion: 2,
 };
 export const preferenceKey = 'danila-portfolio-v1';
 export function readPreferences(raw: string | null): Preferences {
   try {
     const value = JSON.parse(raw || 'null');
-    const unlocked = ['corporate'];
-    if (Array.isArray(value?.unlocked) && value.unlocked.includes('character-2')) {
-      unlocked.push('character-2');
+    const unlocked = [...initialPreferences.unlocked];
+    if (value?.unlockVersion === 2 && Array.isArray(value?.unlocked) && value.unlocked.includes('character-3')) {
+      unlocked.push('character-3');
     }
     return {
+      unlockVersion: 2,
       theme: value?.theme === 'dark' ? 'dark' : 'light',
       unlocked,
       character: unlocked.includes(value?.character) ? value.character : 'corporate',
     };
   } catch {
-    return { ...initialPreferences, unlocked: ['corporate'] };
+    return { ...initialPreferences, unlocked: [...initialPreferences.unlocked] };
   }
 }
 export function unlockMessage(prefs: Preferences): Preferences {
-  return prefs.unlocked.includes('character-2')
+  return prefs.unlocked.includes('character-3')
     ? prefs
-    : { ...prefs, unlocked: [...prefs.unlocked, 'character-2'] };
+    : { ...prefs, unlocked: [...prefs.unlocked, 'character-3'] };
 }
 export function applyCharacter(prefs: Preferences, id: string): Preferences {
   return prefs.unlocked.includes(id) && characters.some((c) => c.id === id)
