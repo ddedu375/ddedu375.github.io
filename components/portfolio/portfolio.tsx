@@ -96,7 +96,6 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
         <CharacterVideoLayer
           key={media.source}
           source={media.source}
-          poster={media.poster}
           visible={canReveal && media.source === source && readySource === source}
           slowEnd={media.source === source && slowEnd}
           onReady={media.source === source ? () => setReadySource(media.source) : undefined}
@@ -111,9 +110,8 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
   );
 }
 
-function CharacterVideoLayer({ source, poster, visible, slowEnd, onReady, onEnded }: {
+function CharacterVideoLayer({ source, visible, slowEnd, onReady, onEnded }: {
   source: string;
-  poster: string | null;
   visible: boolean;
   slowEnd: boolean;
   onReady?: () => void;
@@ -165,7 +163,6 @@ function CharacterVideoLayer({ source, poster, visible, slowEnd, onReady, onEnde
   return (
     <video
       ref={videoRef}
-      poster={poster ?? undefined}
       style={{ opacity: visible ? 1 : 0 }}
       preload="auto"
       autoPlay
