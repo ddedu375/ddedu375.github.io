@@ -1248,7 +1248,7 @@ html {
   border: 0;
   text-align: left;
   padding: 0;
-  background: #fff;
+  background: var(--background);
   cursor: url('/eraser-cursor.svg') 8 22, crosshair;
   touch-action: none;
   user-select: none;
@@ -1271,9 +1271,9 @@ html {
   mask-repeat: no-repeat;
 }
 .paper-note-under {
-  color: #737373;
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #d4d4d4;
+  color: color-mix(in srgb, var(--foreground) 45%, var(--background));
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 17%, var(--background));
 }
 .paper-eraser-particle {
   position: fixed;
