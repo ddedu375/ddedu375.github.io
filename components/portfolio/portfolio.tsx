@@ -198,17 +198,28 @@ function PortfolioContent() {
   }, [add, close]);
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
     const debugToast = (event: KeyboardEvent) => {
-      if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey || event.code !== 'KeyU' || event.repeat) return;
+      if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey || event.repeat) return;
+      if (event.code !== 'KeyU' && event.code !== 'Backspace') return;
       const target = event.target;
       if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"]')) return;
       event.preventDefault();
-      showUnlockToast();
+      if (event.code === 'KeyU') {
+        showUnlockToast();
+      } else {
+        clearTimeout(toastDelay.current);
+        clearTimeout(toastDismiss.current);
+        close();
+        setPanel(null);
+        setCopyState(null);
+        setCarouselStart(0);
+        setSelected(0);
+        setPrefs((previous) => ({ ...previous, unlocked: ['corporate'], character: 'corporate' }));
+      }
     };
     window.addEventListener('keydown', debugToast);
     return () => window.removeEventListener('keydown', debugToast);
-  }, [showUnlockToast]);
+  }, [showUnlockToast, close, setPrefs]);
 
   useLayoutEffect(() => {
     const nav = navigationRef.current;
