@@ -246,6 +246,8 @@ function PortfolioContent() {
 
   const [prefs, setPrefs] = usePreferences();
   const [panel, setPanel] = useState<Panel>(null);
+  const [renderedPanel, setRenderedPanel] = useState<Exclude<Panel, null>>('contacts');
+  if (panel !== null && panel !== renderedPanel) setRenderedPanel(panel);
   const [sticky, setSticky] = useState(false);
   const [navigation, setNavigation] = useState({
     id: 'hints',
@@ -492,6 +494,7 @@ function PortfolioContent() {
   }
 
   const current = characters.find((c) => c.id === prefs.character);
+  const displayName = current?.id === 'character-3' ? `${profile.name} 7 лет` : profile.name;
   const preview = characters[selected];
   const canApply = prefs.unlocked.includes(preview.id);
   const resume = (compact = false) => (
@@ -523,7 +526,7 @@ function PortfolioContent() {
         <div className="sticky-inner">
           <a className="sticky-profile" href="#about" aria-label="Обо мне">
             <span>
-              <span>{profile.name}</span>
+              <span>{displayName}</span>
               <span className="secondary">{profile.role}</span>
             </span>
           </a>
@@ -592,8 +595,8 @@ function PortfolioContent() {
             />
           </div>
           <div className="bio text-block">
-            <h1 className="intro-name" aria-label={profile.name}>
-              {profile.name.split(' ').map((word, index) => (
+            <h1 className="intro-name" aria-label={displayName}>
+              {displayName.split(' ').map((word, index) => (
                 <span className="name-mask" key={word} aria-hidden="true">
                   <span
                     style={{
@@ -705,7 +708,7 @@ function PortfolioContent() {
         </section>
       </main>
       <DialogContent
-        className={`portfolio-dialog ${panel === 'contacts' ? 'contacts-dialog' : 'customize-dialog'}`}
+        className={`portfolio-dialog ${renderedPanel === 'contacts' ? 'contacts-dialog' : 'customize-dialog'}`}
         showCloseButton={false}
         finalFocus={openerRef}
       >
@@ -719,7 +722,7 @@ function PortfolioContent() {
         </button>
         <div className="modal-heading">
           <DialogTitle className="modal-title">
-            {panel === 'contacts' ? 'Контакты' : 'Данила Плешаков, 21 год'}
+            {renderedPanel === 'contacts' ? 'Контакты' : 'Данила Плешаков, 21 год'}
           </DialogTitle>
           <DialogClose
             className="control icon-control desktop-close"
@@ -728,7 +731,7 @@ function PortfolioContent() {
             <AnimatedIcon name="close" size={16} />
           </DialogClose>
         </div>
-        {panel === 'contacts' ? (
+        {renderedPanel === 'contacts' ? (
           <>
             <div className="contact-list">
               {(['email', 'telegram'] as const).map((kind) => (
@@ -824,7 +827,7 @@ function PortfolioContent() {
               <div className="style-action">
                 {canApply ? (
                   <button
-                    className="control primary-control apply-control"
+                    className="control main-control primary-control apply-control"
                     type="button"
                     onClick={() => {
                       playUISound('click', 0.65);
