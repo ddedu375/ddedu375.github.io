@@ -16,7 +16,7 @@ export const profile = {
   defaultPoster: null as string | null,
 };
 export const characters: Character[] = [
-  { id: 'corporate', name: 'Корпорат', video: null, poster: null, unlock: null },
+  { id: 'corporate', name: 'Корпорат', video: '/videos/corporate.mp4', poster: null, unlock: null },
   { id: 'character-2', name: 'Стиль 2', video: null, poster: null, unlock: 'message' },
 ];
 export const description =
