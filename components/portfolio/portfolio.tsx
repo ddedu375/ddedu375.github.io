@@ -89,7 +89,7 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
           unoptimized
           loading="eager"
           className="character-video-poster"
-          style={{ opacity: canReveal && readySource !== source ? 1 : 0 }}
+          style={{ objectFit: 'inherit', opacity: canReveal && readySource !== source ? 1 : 0 }}
         />
       )}
       {layers.map((media) => media.source && (
