@@ -711,8 +711,8 @@ html[data-theme='dark'] {
   width: 100%;
   height: auto;
   min-height: 60px;
-  background: #000;
-  color: #fff;
+  background: var(--foreground);
+  color: var(--background);
   border: 0;
   border-radius: 8px;
   box-shadow: none;
@@ -759,7 +759,7 @@ html[data-theme='dark'] {
 }
 @media (min-width: 640px) {
   .portfolio-toasts { inset: 24px 24px auto; width: max-content; max-width: calc(100vw - 48px); --toast-entry-y: -8px; }
-  .portfolio-toast { min-height: 40px; border-radius: 12px; border: 1px solid #0000006b; }
+  .portfolio-toast { min-height: 40px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--foreground) 42%, transparent); }
   .portfolio-toast-content { padding: 5px 5px 5px 9px; gap: 16px; }
   .portfolio-toast-title { white-space: nowrap; }
 }
