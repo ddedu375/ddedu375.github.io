@@ -57,6 +57,11 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
 }) {
   const [shown, setShown] = useState<CharacterMedia>({ source, poster });
   const [readySource, setReadySource] = useState<string | null>(null);
+  const [requestedSource, setRequestedSource] = useState(source);
+  if (requestedSource !== source) {
+    setRequestedSource(source);
+    setReadySource(null);
+  }
   const pending = source !== shown.source;
   const fading = pending && readySource === source;
   useEffect(() => {
@@ -499,7 +504,6 @@ function PortfolioContent() {
   }
 
   const current = characters.find((c) => c.id === prefs.character);
-  const displayName = current?.id === 'character-3' ? `${profile.name} 7 лет` : profile.name;
   const preview = characters[selected];
   const canApply = prefs.unlocked.includes(preview.id);
   const resume = (compact = false) => (
@@ -531,7 +535,7 @@ function PortfolioContent() {
         <div className="sticky-inner">
           <a className="sticky-profile" href="#about" aria-label="Обо мне">
             <span>
-              <span>{displayName}</span>
+              <span>{profile.name}</span>
               <span className="secondary">{profile.role}</span>
             </span>
           </a>
@@ -600,8 +604,8 @@ function PortfolioContent() {
             />
           </div>
           <div className="bio text-block">
-            <h1 className="intro-name" aria-label={displayName}>
-              {displayName.split(' ').map((word, index) => (
+            <h1 className="intro-name" aria-label={profile.name}>
+              {profile.name.split(' ').map((word, index) => (
                 <span className="name-mask" key={word} aria-hidden="true">
                   <span
                     style={{
@@ -727,7 +731,7 @@ function PortfolioContent() {
         </button>
         <div className="modal-heading">
           <DialogTitle className="modal-title">
-            {renderedPanel === 'contacts' ? 'Контакты' : 'Данила Плешаков, 21 год'}
+            {renderedPanel === 'contacts' ? 'Контакты' : `${profile.name}, ${preview.id === 'character-3' ? '7 лет' : '21 год'}`}
           </DialogTitle>
           <DialogClose
             className="control icon-control desktop-close"
@@ -832,7 +836,7 @@ function PortfolioContent() {
               <div className="style-action">
                 {canApply ? (
                   <button
-                    className="control main-control primary-control apply-control"
+                    className="control primary-control apply-control"
                     type="button"
                     onClick={() => {
                       playUISound('click', 0.65);
