@@ -55,7 +55,14 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
   onEnded?: () => void;
 }) {
   const [shown, setShown] = useState<CharacterMedia>({ source, poster });
+  const [readySource, setReadySource] = useState<string | null>(null);
   const pending = source !== shown.source;
+  const fading = pending && readySource === source;
+  useEffect(() => {
+    if (!fading) return;
+    const timeout = setTimeout(() => setShown({ source, poster }), 300);
+    return () => clearTimeout(timeout);
+  }, [fading, source, poster]);
   const layers = pending && shown.source ? [shown, { source, poster }] : [{ source, poster }];
 
   return source ? (
@@ -65,9 +72,9 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
           key={media.source}
           source={media.source}
           poster={media.poster}
-          visible={media.source === shown.source || !shown.source}
+          visible={pending ? (media.source === source ? fading || !shown.source : !fading) : true}
           slowEnd={media.source === source && slowEnd}
-          onReady={media.source === source ? () => setShown(media) : undefined}
+          onReady={media.source === source ? () => setReadySource(media.source) : undefined}
           onEnded={media.source === source ? onEnded : undefined}
         />
       ))}
@@ -135,7 +142,7 @@ function CharacterVideoLayer({ source, poster, visible, slowEnd, onReady, onEnde
       ref={videoRef}
       src={source}
       poster={poster ?? undefined}
-      style={{ visibility: visible ? 'visible' : 'hidden' }}
+      style={{ opacity: visible ? 1 : 0 }}
       preload="auto"
       autoPlay
       muted
@@ -238,8 +245,6 @@ function PortfolioContent() {
   };
 
   const [prefs, setPrefs] = usePreferences();
-  const [darkTransition, setDarkTransition] = useState(false);
-  const playingDarkTransition = prefs.theme === 'dark' && darkTransition && (prefs.character === 'corporate' || !!characters.find((character) => character.id === prefs.character)?.darkTransitionVideo);
   const [panel, setPanel] = useState<Panel>(null);
   const [sticky, setSticky] = useState(false);
   const [navigation, setNavigation] = useState({
@@ -570,7 +575,6 @@ function PortfolioContent() {
               }
               onClick={() => {
                 playUISound('toggle');
-                setDarkTransition(prefs.theme === 'light');
                 setPrefs((previous) => ({
                   ...previous,
                   theme: previous.theme === 'light' ? 'dark' : 'light',
@@ -583,10 +587,8 @@ function PortfolioContent() {
           <div className="portrait-entry">
             <CharacterVideo
               className="portrait"
-              slowEnd={!playingDarkTransition}
-              onEnded={() => setDarkTransition(false)}
-              source={playingDarkTransition ? current?.darkTransitionVideo ?? profile.darkTransitionVideo : prefs.theme === 'dark' ? current?.darkVideo ?? current?.video ?? profile.defaultDarkVideo : current?.video ?? profile.defaultVideo}
-              poster={playingDarkTransition ? current?.darkTransitionPoster ?? profile.darkTransitionPoster : prefs.theme === 'dark' ? current?.darkPoster ?? current?.poster ?? profile.defaultDarkPoster : current?.poster ?? profile.defaultPoster}
+              source={prefs.theme === 'dark' ? current?.darkVideo ?? current?.video ?? profile.defaultDarkVideo : current?.video ?? profile.defaultVideo}
+              poster={prefs.theme === 'dark' ? current?.darkPoster ?? current?.poster ?? profile.defaultDarkPoster : current?.poster ?? profile.defaultPoster}
             />
           </div>
           <div className="bio text-block">

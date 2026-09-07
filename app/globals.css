@@ -1329,4 +1329,9 @@ html {
   height: 100%;
   object-fit: inherit;
   display: block;
+  transition: opacity 300ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .character-video > video { transition: none; }
 }
