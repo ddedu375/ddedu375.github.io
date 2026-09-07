@@ -58,27 +58,46 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
   const [shown, setShown] = useState<CharacterMedia>({ source, poster });
   const [readySource, setReadySource] = useState<string | null>(null);
   const [requestedSource, setRequestedSource] = useState(source);
+  const [revealSource, setRevealSource] = useState(source);
   if (requestedSource !== source) {
     setRequestedSource(source);
     setReadySource(null);
+    setRevealSource(null);
   }
+  useEffect(() => {
+    const timeout = setTimeout(() => setRevealSource(source), 180);
+    return () => clearTimeout(timeout);
+  }, [source]);
+  const canReveal = revealSource === source;
   const pending = source !== shown.source;
-  const fading = pending && readySource === source;
+  const fading = pending && canReveal && readySource === source;
   useEffect(() => {
     if (!fading) return;
-    const timeout = setTimeout(() => setShown({ source, poster }), 300);
+    const timeout = setTimeout(() => setShown({ source, poster }), 180);
     return () => clearTimeout(timeout);
   }, [fading, source, poster]);
   const layers = pending && shown.source ? [shown, { source, poster }] : [{ source, poster }];
 
   return source ? (
     <div className={`${className} character-video`}>
+      {poster && (
+        <Image
+          key={poster}
+          src={poster}
+          alt=""
+          fill
+          unoptimized
+          loading="eager"
+          className="character-video-poster"
+          style={{ opacity: canReveal && readySource !== source ? 1 : 0 }}
+        />
+      )}
       {layers.map((media) => media.source && (
         <CharacterVideoLayer
           key={media.source}
           source={media.source}
           poster={media.poster}
-          visible={pending ? (media.source === source ? fading || !shown.source : !fading) : true}
+          visible={canReveal && media.source === source && readySource === source}
           slowEnd={media.source === source && slowEnd}
           onReady={media.source === source ? () => setReadySource(media.source) : undefined}
           onEnded={media.source === source ? onEnded : undefined}
