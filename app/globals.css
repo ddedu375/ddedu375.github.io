@@ -12,7 +12,7 @@
   --font-mono: var(--font-geist-mono);
 }
 :root {
-  color-scheme: light;
+  color-scheme: only light;
   --background: #fff;
   --foreground: #000;
   --secondary-text: #0009;

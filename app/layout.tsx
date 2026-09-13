@@ -23,6 +23,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  colorScheme: 'only light',
 };
 
 export const metadata: Metadata = {
