@@ -1839,6 +1839,8 @@ html[data-skin='pink'] { --accent: #d52f83; --primary-background: #d52f83; }
 .resume-downloads { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px 24px; margin-top: 40px; }
 .resume-downloads .footer-links { grid-column: 2; grid-row: 1; justify-content: flex-end; margin: 0; flex-wrap: wrap; gap: 16px; }
 .resume-downloads .footer-copy { text-align: right; }
+.resume-downloads .footer-links :is(a, button) { color: var(--secondary-text); }
+.resume-downloads .footer-links :is(a, button):hover { color: var(--foreground); }
 .resume-download-group { grid-column: 1; grid-row: 1; display: inline-flex; gap: 2px; }
 .resume-download-control { height: 40px; padding: 0 16px; font-size: 14px; border-radius: 2px; }
 .resume-download-control:first-child { border-radius: 6px 2px 2px 6px; }
