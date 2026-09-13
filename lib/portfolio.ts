@@ -45,8 +45,8 @@ export const description =
 export const projects = [
   { id: 'typer', label: 'Эдит', description: 'Нативная Mac OS мини-апка для исправления, а также чистки текста в любом приложении, собираю сам вместе с ИИ, пока work in progress.\n\nИнтересный факт: под капотом крутится локально могучий Гигачат', video: '/projects/edit.mp4?v=2', poster: '/projects/edit.jpg?v=2' },
   { id: 'search', label: 'Объявление в поиске', description: 'Задизайнил панель объявлений пользователя прямо в поисковой выдаче, можно смотреть статистику и видеть, как перфомит объявления в любом запросе с своими настройками', video: '/projects/realtime.mp4', poster: '/projects/realtime.jpg' },
-  { id: 'comparison', label: 'Подборка конкурентов', description: 'Пользователям не хватало прозрачности при сравнении объявления с конкурентами, я концептил раздел, чтобы можно видеть, что участвует в сравнении с тобой', video: '/projects/comparison.mp4', poster: '/projects/comparison.jpg' },
-  { id: 'promotion', label: 'Таймлайн продвижения', description: 'Пересобрал компонент активных продвижений у объявления пользователя, теперь легче соотносить его с твоими результатами', video: '/projects/timelines.mp4', poster: '/projects/timelines.jpg' },
+  { id: 'comparison', label: 'Подборка конкурентов', description: 'Пользователям не хватало прозрачности при сравнении объявления с конкурентами, я концептил раздел, чтобы можно видеть, кто участвует в сравнении с тобой', video: '/projects/comparison.mp4', poster: '/projects/comparison.jpg' },
+  { id: 'promotion', label: 'Таймлайн продвижения', description: 'Пересобрал компонент активных продвижений у объявления пользователя, теперь легче соотносить его со своими результатами', video: '/projects/timelines.mp4', poster: '/projects/timelines.jpg' },
   { id: 'hints', label: 'Подсказки', description: 'Участвовал в редизайне странице позиции в поиске, захотелось наглядно показать пользователям, как работают наши фичи', video: '/projects/hints.mp4', poster: '/projects/hints.jpg' },
 ] as const;
 export type Preferences = {
