@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "GITHUB_PAGES=true npm run build",
+  "outputDirectory": "dist/client",
+  "cleanUrls": true
+}
