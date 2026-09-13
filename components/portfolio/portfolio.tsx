@@ -8,7 +8,7 @@ import { AvitoSticker } from './avito-sticker';
 import { ProjectVideo } from './project-video';
 import { ContactPaper } from './contact-paper';
 import { UnlockCelebration } from './unlock-celebration';
-import { playUISound } from '@/lib/ui-sounds.js';
+import { playUISound, unlockUISound } from '@/lib/ui-sounds.js';
 import {
   Toast,
   ToastContent,
@@ -42,11 +42,13 @@ function CharacterVideo({ source, poster, locked = false, className, slowEnd = t
 }) {
   const [shown, setShown] = useState<CharacterMedia>({ source, poster, locked });
   const [readySource, setReadySource] = useState<string | null>(null);
+  const [endedSource, setEndedSource] = useState<string | null>(null);
   const [requestedSource, setRequestedSource] = useState(source);
   const [revealSource, setRevealSource] = useState(source);
   if (requestedSource !== source) {
     setRequestedSource(source);
     setReadySource(null);
+    setEndedSource(null);
     setRevealSource(null);
   }
   useEffect(() => {
@@ -76,18 +78,20 @@ function CharacterVideo({ source, poster, locked = false, className, slowEnd = t
           loading="eager"
           className="character-video-poster"
           data-locked={locked}
-          style={{ objectFit: 'inherit', opacity: canReveal && readySource !== source ? 1 : 0 }}
+          style={{ objectFit: 'inherit', opacity: canReveal && (readySource !== source || endedSource === source) ? 1 : 0 }}
         />
       )}
       {layers.map((media) => media.source && (
         <CharacterVideoLayer
           key={media.source}
           source={media.source}
+          active={media.source === source}
           locked={media.source === source ? locked : Boolean(media.locked)}
-          visible={canReveal && media.source === source && readySource === source}
+          visible={canReveal && media.source === source && readySource === source && endedSource !== source}
           slowEnd={media.source === source && slowEnd}
           onReady={media.source === source ? () => setReadySource(media.source) : undefined}
-          onEnded={media.source === source ? onEnded : undefined}
+          onPlay={media.source === source ? () => setEndedSource(null) : undefined}
+          onEnded={media.source === source ? () => { setEndedSource(source); onEnded?.(); } : undefined}
         />
       ))}
     </div>
@@ -103,12 +107,14 @@ function CharacterVideo({ source, poster, locked = false, className, slowEnd = t
   );
 }
 
-function CharacterVideoLayer({ source, visible, locked, slowEnd, onReady, onEnded }: {
+function CharacterVideoLayer({ source, active, visible, locked, slowEnd, onReady, onPlay, onEnded }: {
   source: string;
+  active: boolean;
   visible: boolean;
   locked: boolean;
   slowEnd: boolean;
   onReady?: () => void;
+  onPlay?: () => void;
   onEnded?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -117,7 +123,7 @@ function CharacterVideoLayer({ source, visible, locked, slowEnd, onReady, onEnde
   useLayoutEffect(() => { readyRef.current = onReady; }, [onReady]);
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !active) return;
     const markReady = () => {
       if (decodedFrame.current !== null) return;
       if (video.requestVideoFrameCallback && !video.paused && !video.ended) {
@@ -139,7 +145,7 @@ function CharacterVideoLayer({ source, visible, locked, slowEnd, onReady, onEnde
         decodedFrame.current = null;
       }
     };
-  }, [source]);
+  }, [source, active]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -183,6 +189,7 @@ function CharacterVideoLayer({ source, visible, locked, slowEnd, onReady, onEnde
       preload="auto"
       autoPlay
       muted
+      onPlay={onPlay}
       onEnded={onEnded}
       playsInline
       aria-label="Видео персонажа"
@@ -313,6 +320,17 @@ function PortfolioContent() {
 
   const swipeStart = useRef<{ id: number; x: number; y: number } | null>(null);
   const [prefs, setPrefs] = usePreferences();
+  useEffect(() => {
+    const unlock = () => { void unlockUISound(); };
+    window.addEventListener('touchend', unlock, { capture: true, passive: true });
+    window.addEventListener('pointerdown', unlock, { capture: true, passive: true });
+    window.addEventListener('keydown', unlock, true);
+    return () => {
+      window.removeEventListener('touchend', unlock, true);
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+    };
+  }, []);
   const footerEmail = useEmailCopy();
   const contactEmail = useEmailCopy();
   const [paperReset, setPaperReset] = useState(0);
