@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { AnimatedIcon } from './animated-icon';
 import { AnimatePresence, animate, motion, useAnimationControls, useReducedMotion, type AnimationPlaybackControls } from 'motion/react';
 import { AvitoSticker } from './avito-sticker';
+import { VisitorLetter } from './visitor-letter';
 import { ProjectVideo } from './project-video';
 import { ContactPaper } from './contact-paper';
 import { UnlockCelebration } from './unlock-celebration';
@@ -43,10 +44,12 @@ function CharacterVideo({ source, poster, locked = false, className, slowEnd = t
   const [shown, setShown] = useState<CharacterMedia>({ source, poster, locked });
   const [readySource, setReadySource] = useState<string | null>(null);
   const [endedSource, setEndedSource] = useState<string | null>(null);
+  const [instantPlayback, setInstantPlayback] = useState(false);
   const [requestedSource, setRequestedSource] = useState(source);
   const [revealSource, setRevealSource] = useState(source);
   if (requestedSource !== source) {
     setRequestedSource(source);
+    setInstantPlayback(false);
     setReadySource(null);
     setEndedSource(null);
     setRevealSource(null);
@@ -67,7 +70,7 @@ function CharacterVideo({ source, poster, locked = false, className, slowEnd = t
 
   return source ? (
     <>
-    <div className={`${className} character-video`}>
+    <div className={`${className} character-video`} data-instant-playback={instantPlayback}>
       {poster && (
         <Image
           key={poster}
@@ -90,7 +93,7 @@ function CharacterVideo({ source, poster, locked = false, className, slowEnd = t
           visible={canReveal && media.source === source && readySource === source && endedSource !== source}
           slowEnd={media.source === source && slowEnd}
           onReady={media.source === source ? () => setReadySource(media.source) : undefined}
-          onPlay={media.source === source ? () => setEndedSource(null) : undefined}
+          onPlay={media.source === source ? () => { if (endedSource === media.source) { setInstantPlayback(true); setEndedSource(null); } } : undefined}
           onEnded={media.source === source ? () => { setEndedSource(source); onEnded?.(); } : undefined}
         />
       ))}
@@ -119,6 +122,8 @@ function CharacterVideoLayer({ source, active, visible, locked, slowEnd, onReady
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readyRef = useRef(onReady);
+  const playRef = useRef(onPlay);
+  useLayoutEffect(() => { playRef.current = onPlay; }, [onPlay]);
   const decodedFrame = useRef<number | null>(null);
   useLayoutEffect(() => { readyRef.current = onReady; }, [onReady]);
   useEffect(() => {
@@ -135,10 +140,22 @@ function CharacterVideoLayer({ source, active, visible, locked, slowEnd, onReady
         readyRef.current?.();
       }
     };
+    const markPlaying = () => {
+      if (video.requestVideoFrameCallback) {
+        if (decodedFrame.current !== null) video.cancelVideoFrameCallback(decodedFrame.current);
+        decodedFrame.current = video.requestVideoFrameCallback(() => {
+          decodedFrame.current = null;
+          readyRef.current?.();
+          playRef.current?.();
+        });
+      } else if (!video.seeking && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) playRef.current?.();
+    };
+    video.addEventListener('playing', markPlaying);
     video.addEventListener('loadeddata', markReady);
     // Cached media can load before React hydrates and attaches its handlers.
     if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) markReady();
     return () => {
+      video.removeEventListener('playing', markPlaying);
       video.removeEventListener('loadeddata', markReady);
       if (decodedFrame.current !== null) {
         video.cancelVideoFrameCallback?.(decodedFrame.current);
@@ -189,7 +206,6 @@ function CharacterVideoLayer({ source, active, visible, locked, slowEnd, onReady
       preload="auto"
       autoPlay
       muted
-      onPlay={onPlay}
       onEnded={onEnded}
       playsInline
       aria-label="Видео персонажа"
@@ -558,13 +574,15 @@ function PortfolioContent() {
           <div className="bio text-block">
             <h1 className="intro-name">{profile.name}</h1>
             <p className="secondary">
-              Дизайнер продукта, ориентирующийся
-              <br className="bio-break" /> на понятность и удобства интерфейса
+              Дизайнер продукта, люблю прорабатывать взаимодействие с интерфейсом
+            </p>
+            <p className="secondary">
+              Считаю, что дизайн — <span className="avito-label">magic<AvitoSticker path="/animations/magic-sticker.json" size={20} /></span>
             </p>
           </div>
           <div className="experience text-block">
             <h2>Опыт</h2>
-            <p className="secondary">{description.slice(0, -5)}<span className="avito-label">Avito<AvitoSticker /></span></p>
+            <p className="secondary">{description.slice(0, -7)}<span className="avito-label">в Avito<AvitoSticker /></span></p>
           </div>
           <div className="intro-actions">
             {contactLinks()}
@@ -611,7 +629,7 @@ function PortfolioContent() {
               >
                 <figure>
                   <ProjectVideo source={project.video} poster={project.poster} label={project.label} />
-                  <figcaption>Описание проекта «{project.label}» скоро появится.</figcaption>
+                  <figcaption>{project.description.split('\n\n').map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</figcaption>
                 </figure>
               </article>
             ))}
@@ -635,6 +653,7 @@ function PortfolioContent() {
         </section>
       </main>
       <Notifications />
+      <VisitorLetter />
     </>
   );
 }

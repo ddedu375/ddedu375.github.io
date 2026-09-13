@@ -157,7 +157,7 @@ figure {
   }
 }
 .style-dots, .style-arrows { display: flex; align-items: center; gap: 8px; }
-.style-dots { gap: 0; width: 48px; flex-shrink: 0; }
+.style-dots { gap: 0; width: 80px; flex-shrink: 0; }
 .style-dot-hit {
   display: grid;
   place-items: center;
@@ -272,8 +272,11 @@ kbd {
   aspect-ratio: 556 / 696;
 }
 .case figcaption {
-  max-width: 464px;
+  width: 100%;
   margin-top: calc(16px * var(--entrance-spacing, 1));
+}
+.case figcaption p + p {
+  margin-top: 12px;
 }
 .case .project-video {
   display: block;
@@ -426,6 +429,10 @@ html[data-theme='dark'] {
 html[data-skin='corporate'] {
   --accent: #000;
   --primary-background: #000;
+}
+html[data-skin='leather'] {
+  --accent: #805b42;
+  --primary-background: #805b42;
 }
 html[data-skin='character-3'] {
   --accent: #00843d;
@@ -1133,6 +1140,7 @@ html[data-theme='dark'][data-skin='character-3'] { --accent: #42cf7c; }
     .sticky-header,
     .portfolio-dialog,
     .project-video-dialog,
+    .visitor-letter-dialog,
     .portfolio-toasts,
     .resume-placeholder
   )
@@ -1148,6 +1156,7 @@ html[data-theme='dark'][data-skin='character-3'] { --accent: #42cf7c; }
     .sticky-header,
     .portfolio-dialog,
     .project-video-dialog,
+    .visitor-letter-dialog,
     .portfolio-toasts,
     .resume-placeholder
   )
@@ -1192,6 +1201,7 @@ html[data-theme='dark'][data-skin='character-3'] { --accent: #42cf7c; }
       .sticky-header,
       .portfolio-dialog,
     .project-video-dialog,
+    .visitor-letter-dialog,
       .portfolio-toasts,
       .resume-placeholder
     )
@@ -1203,6 +1213,7 @@ html[data-theme='dark'][data-skin='character-3'] { --accent: #42cf7c; }
       .sticky-header,
       .portfolio-dialog,
     .project-video-dialog,
+    .visitor-letter-dialog,
       .portfolio-toasts,
       .resume-placeholder
     )
@@ -1714,14 +1725,41 @@ html {
 @media (max-width: 1023px) {
   .portrait-entry > .portrait {
     aspect-ratio: auto;
-    padding-top: calc(100% * 256 / 368 + 32px);
+    padding-top: calc(100% * 256 / 368 + 64px);
     margin-top: -32px;
   }
   .portrait-entry > .portrait > video,
   .portrait-entry > .portrait > .character-video-poster {
     top: 32px !important;
     height: calc(100% - 32px) !important;
-    scale: 1.16;
+    scale: 1.2;
     transform-origin: center;
   }
 }
+
+.visitor-letter { position: fixed; z-index: 50; right: max(24px, env(safe-area-inset-right)); bottom: max(10dvh, env(safe-area-inset-bottom)); width: 170px; height: 180px; padding: 0; border: 0; background: transparent; cursor: pointer; touch-action: manipulation; filter: drop-shadow(0 8px 9px rgb(0 0 0 / 17%)); }
+.visitor-letter-partial { width: 220px; height: 240px; }
+.visitor-letter > img { width: 100%; height: 100%; object-fit: contain; user-select: none; }
+.visitor-letter:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 12px; }
+.visitor-letter-dialog { position: fixed; inset: 0; width: 100%; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 24px; border: 0; background: transparent; overflow: auto; }
+.visitor-letter-dialog[open] { display: grid; place-items: center; }
+.visitor-letter-dialog::backdrop { background: rgb(0 0 0 / 48%); }
+.visitor-letter-paper { position: relative; width: min(640px, 100%, calc((100dvh - 48px) * 0.714)); }
+.visitor-letter-paper > img { width: 100%; height: auto; display: block; filter: drop-shadow(0 12px 24px rgb(0 0 0 / 15%)); }
+.visitor-letter-close { position: absolute; right: 12px; top: 12px; }
+@media (max-width: 600px) {
+  .visitor-letter { width: 130px; height: 145px; right: 16px; }
+  .visitor-letter-partial { width: 185px; height: 200px; }
+  .visitor-letter-dialog { padding: 16px; }
+  .visitor-letter-paper { width: min(100%, calc((100dvh - 32px) * 0.714)); }
+}
+
+@media (max-width: 1023px) {
+  .portfolio { padding-top: calc(16px + env(safe-area-inset-top)); }
+  .intro { scroll-margin-top: calc(16px + env(safe-area-inset-top)); }
+}
+
+.character-video[data-instant-playback="true"] > video,
+.character-video[data-instant-playback="true"] > .character-video-poster { transition: none; }
+
+html[data-skin='pink'] { --accent: #d52f83; --primary-background: #d52f83; }

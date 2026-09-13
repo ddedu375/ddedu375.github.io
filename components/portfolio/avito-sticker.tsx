@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import type { AnimationItem } from 'lottie-web';
 
-export function AvitoSticker() {
+export function AvitoSticker({ path = '/animations/avito-sticker.json', size = 16 }: { path?: string; size?: number }) {
   const container = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export function AvitoSticker() {
         renderer: 'svg',
         loop: true,
         autoplay: !reducedMotion.matches,
-        path: '/animations/avito-sticker.json',
+        path,
       });
     });
     reducedMotion.addEventListener('change', syncMotion);
@@ -30,7 +30,7 @@ export function AvitoSticker() {
       reducedMotion.removeEventListener('change', syncMotion);
       animation?.destroy();
     };
-  }, []);
+  }, [path]);
 
-  return <span ref={container} className="avito-sticker" aria-hidden="true" />;
+  return <span ref={container} className="avito-sticker" style={{ width: size, height: size, flexBasis: size }} aria-hidden="true" />;
 }

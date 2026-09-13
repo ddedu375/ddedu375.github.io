@@ -16,9 +16,9 @@ test('Повреждённые настройки не мешают открыт
     assert.deepEqual(readPreferences(raw), initialPreferences);
   }
 });
-test('Послание открывает третий стиль один раз и не меняет выбранное видео', () => {
+test('Послание открывает детский стиль один раз и не меняет выбранное видео', () => {
   const once = unlockMessage(initialPreferences);
-  assert.deepEqual(once.unlocked, ['character-2', 'corporate', 'character-3']);
+  assert.deepEqual(once.unlocked, ['character-2', 'corporate', 'leather', 'pink', 'character-3']);
   assert.equal(once.character, 'character-2');
   assert.deepEqual(unlockMessage(once), once);
 });
@@ -45,14 +45,14 @@ test('Неизвестные и повторяющиеся сохранённы�
   assert.deepEqual(restored, {
     unlockVersion: 3,
     theme: 'light',
-    unlocked: ['character-2', 'corporate'],
+    unlocked: ['character-2', 'corporate', 'leather', 'pink'],
     character: 'character-2',
   });
 });
 
-test('Старые настройки получают доступный +Вайбик без открытия третьего стиля', () => {
+test('Старые настройки получают доступный +Вайбик без открытия детского стиля', () => {
   assert.deepEqual(readPreferences(JSON.stringify({ theme: 'dark', unlocked: [], character: null })), {
-    unlockVersion: 3, theme: 'light', unlocked: ['character-2', 'corporate'], character: 'character-2',
+    unlockVersion: 3, theme: 'light', unlocked: ['character-2', 'corporate', 'leather', 'pink'], character: 'character-2',
   });
 });
 
@@ -60,14 +60,14 @@ test('+Вайбик доступен сразу и его выбор сохра�
   const next = applyCharacter(initialPreferences, 'character-2');
   assert.equal(next.character, 'character-2');
   assert.deepEqual(readPreferences(JSON.stringify(next)), { ...next, theme: 'light' });
-  assert.deepEqual(readPreferences(JSON.stringify({ unlocked: ['corporate'], character: 'corporate' })).unlocked, ['character-2', 'corporate']);
+  assert.deepEqual(readPreferences(JSON.stringify({ unlocked: ['corporate'], character: 'corporate' })).unlocked, ['character-2', 'corporate', 'leather', 'pink']);
 });
 
-test('Старый автоматически открытый третий стиль закрывается, тема становится светлой', () => {
+test('Старый автоматически открытый детский стиль закрывается, тема становится светлой', () => {
   const restored = readPreferences(JSON.stringify({theme: 'dark', unlocked: ['corporate', 'character-3'], character: 'character-3'}));
   assert.equal(restored.theme, 'light');
   assert.equal(restored.character, 'character-2');
-  assert.deepEqual(restored.unlocked, ['character-2', 'corporate']);
+  assert.deepEqual(restored.unlocked, ['character-2', 'corporate', 'leather', 'pink']);
 });
 
 test('Корпорат доступен сразу, включая старые настройки', () => {
@@ -75,5 +75,5 @@ test('Корпорат доступен сразу, включая старые 
   assert.ok(copied.unlocked.includes('corporate'));
   assert.deepEqual(readPreferences(JSON.stringify(copied)), copied);
   assert.equal(unlockContact(copied), copied);
-  assert.deepEqual(readPreferences(JSON.stringify({ unlockVersion: 2, unlocked: ['corporate'], character: 'corporate' })).unlocked, ['character-2', 'corporate']);
+  assert.deepEqual(readPreferences(JSON.stringify({ unlockVersion: 2, unlocked: ['corporate'], character: 'corporate' })).unlocked, ['character-2', 'corporate', 'leather', 'pink']);
 });
