@@ -140,7 +140,7 @@ figure {
   margin-top: calc(24px * var(--entrance-spacing, 1));
 }
 .intro-actions .resume-control { grid-column: 1 / -1; }
-.inline-style-switcher { display: grid; grid-template-columns: auto auto auto; justify-content: center; column-gap: 12px; align-items: center; }
+.inline-style-switcher { position: relative; z-index: 2; display: grid; grid-template-columns: auto auto auto; justify-content: center; column-gap: 12px; align-items: center; }
 .inline-style-switcher > button:first-child { justify-self: start; }
 .inline-style-switcher > button:last-child { justify-self: end; }
 @media (hover: hover) and (pointer: fine) {
@@ -354,7 +354,7 @@ kbd {
     aspect-ratio: 350 / 244;
   }
   .experience {
-    margin-top: calc(24px * var(--entrance-spacing, 1));
+    margin-top: calc(16px * var(--entrance-spacing, 1));
   }
   .main-control {
     height: 44px;
@@ -830,13 +830,10 @@ html[data-theme='dark'][data-skin='character-3'] { --accent: #42cf7c; }
   line-height: 1.125rem;
   font-weight: 400;
 }
-.toast-action {
-  flex-shrink: 0;
-}
 @media (min-width: 640px) {
   .portfolio-toasts { inset: 24px 24px auto; width: max-content; max-width: calc(100vw - 48px); --toast-entry-y: -8px; }
   .portfolio-toast { min-height: 40px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--foreground) 42%, transparent); }
-  .portfolio-toast-content { padding: 5px 5px 5px 9px; gap: 16px; }
+  .portfolio-toast-content { padding: 9px 12px; gap: 0; }
   .portfolio-toast-title { white-space: nowrap; }
 }
 .unlock-confetti {
@@ -1700,4 +1697,31 @@ html {
 
 @media (max-width: 1023px) {
   .project-video-open { display: none; }
+}
+
+/* Leave room above the artwork for the blur without moving the video itself. */
+@media (min-width: 1024px) {
+  .intro .portrait {
+    padding-top: calc(100% * 256 / 368 + 48px);
+    margin-top: -48px;
+  }
+  .intro .portrait > video,
+  .intro .portrait > .character-video-poster {
+    top: 48px !important;
+    height: calc(100% - 48px) !important;
+  }
+}
+@media (max-width: 1023px) {
+  .portrait-entry > .portrait {
+    aspect-ratio: auto;
+    padding-top: calc(100% * 256 / 368 + 32px);
+    margin-top: -32px;
+  }
+  .portrait-entry > .portrait > video,
+  .portrait-entry > .portrait > .character-video-poster {
+    top: 32px !important;
+    height: calc(100% - 32px) !important;
+    scale: 1.16;
+    transform-origin: center;
+  }
 }

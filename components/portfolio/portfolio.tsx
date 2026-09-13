@@ -11,7 +11,6 @@ import { UnlockCelebration } from './unlock-celebration';
 import { playUISound } from '@/lib/ui-sounds.js';
 import {
   Toast,
-  ToastAction,
   ToastContent,
   ToastPortal,
   ToastProvider,
@@ -252,12 +251,6 @@ function Notifications() {
                 <UnlockCelebration />
                 <ToastTitle className="portfolio-toast-title" />
               </div>
-              {item.actionProps && (
-                <ToastAction
-                  className="control compact-control toast-action"
-                  render={<button aria-label="Посмотреть новый стиль" />}
-                />
-              )}
             </ToastContent>
           </Toast>
         ))}
@@ -338,7 +331,7 @@ function PortfolioContent() {
     clearTimeout(toastDismiss.current);
   }, []);
 
-  const showUnlockToast = useCallback((characterId = 'character-3') => {
+  const showUnlockToast = useCallback(() => {
     clearTimeout(toastDelay.current);
     clearTimeout(toastDismiss.current);
     close();
@@ -348,16 +341,6 @@ function PortfolioContent() {
         id: toastId,
         title: 'Вы разблокировали новый стиль',
         timeout: 0,
-        actionProps: {
-          children: 'Посмотреть',
-          onClick: () => {
-            clearTimeout(toastDismiss.current);
-            close(toastId);
-            const index = Math.max(0, characters.findIndex((character) => character.id === characterId));
-            setSelected(index);
-            introRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          },
-        },
       });
       toastDismiss.current = setTimeout(() => close(toastId), 5000);
     }, 200);
@@ -480,7 +463,7 @@ function PortfolioContent() {
   const unlockFromContact = () => {
     if (!prefs.unlocked.includes('corporate')) {
       setPrefs(previous => unlockContact(previous));
-      showUnlockToast('corporate');
+      showUnlockToast();
     }
   };
   const contactLinks = (compact = false) => (
