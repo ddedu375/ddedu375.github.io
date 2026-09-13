@@ -2,27 +2,13 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import Image from 'next/image';
-import { LockKeyhole, Send } from 'lucide-react';
-import { ThemeIcon } from './theme-icon';
-import { animate, motion, useAnimationControls, useReducedMotion, type AnimationPlaybackControls } from 'motion/react';
 import { AnimatedIcon } from './animated-icon';
+import { AnimatePresence, animate, motion, useAnimationControls, useReducedMotion, type AnimationPlaybackControls } from 'motion/react';
 import { AvitoSticker } from './avito-sticker';
-import { FooterSignature } from './footer-signature';
+import { ProjectVideo } from './project-video';
 import { ContactPaper } from './contact-paper';
 import { UnlockCelebration } from './unlock-celebration';
 import { playUISound } from '@/lib/ui-sounds.js';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  type CarouselApi,
-} from '@/components/ui/carousel';
 import {
   Toast,
   ToastAction,
@@ -42,20 +28,20 @@ import {
   safariVideoSources,
   projects,
   unlockMessage,
+  unlockContact,
 } from '@/lib/portfolio';
 
 import { usePreferences } from './use-preferences';
 
-type Panel = 'contacts' | 'customize' | null;
 
-type CharacterMedia = { source: string | null; poster: string | null };
+type CharacterMedia = { source: string | null; poster: string | null; locked?: boolean };
 
-function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: CharacterMedia & {
+function CharacterVideo({ source, poster, locked = false, className, slowEnd = true, onEnded }: CharacterMedia & {
   className: string;
   slowEnd?: boolean;
   onEnded?: () => void;
 }) {
-  const [shown, setShown] = useState<CharacterMedia>({ source, poster });
+  const [shown, setShown] = useState<CharacterMedia>({ source, poster, locked });
   const [readySource, setReadySource] = useState<string | null>(null);
   const [requestedSource, setRequestedSource] = useState(source);
   const [revealSource, setRevealSource] = useState(source);
@@ -73,12 +59,13 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
   const fading = pending && canReveal && readySource === source;
   useEffect(() => {
     if (!fading) return;
-    const timeout = setTimeout(() => setShown({ source, poster }), 180);
+    const timeout = setTimeout(() => setShown({ source, poster, locked }), 180);
     return () => clearTimeout(timeout);
-  }, [fading, source, poster]);
-  const layers = pending && shown.source ? [shown, { source, poster }] : [{ source, poster }];
+  }, [fading, source, poster, locked]);
+  const layers = pending && shown.source ? [shown, { source, poster, locked }] : [{ source, poster, locked }];
 
   return source ? (
+    <>
     <div className={`${className} character-video`}>
       {poster && (
         <Image
@@ -89,6 +76,7 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
           unoptimized
           loading="eager"
           className="character-video-poster"
+          data-locked={locked}
           style={{ objectFit: 'inherit', opacity: canReveal && readySource !== source ? 1 : 0 }}
         />
       )}
@@ -96,6 +84,7 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
         <CharacterVideoLayer
           key={media.source}
           source={media.source}
+          locked={media.source === source ? locked : Boolean(media.locked)}
           visible={canReveal && media.source === source && readySource === source}
           slowEnd={media.source === source && slowEnd}
           onReady={media.source === source ? () => setReadySource(media.source) : undefined}
@@ -103,6 +92,11 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
         />
       ))}
     </div>
+    <div className="locked-portrait-overlay" aria-hidden={!locked || !canReveal}
+      style={{ opacity: locked && canReveal ? 1 : 0 }}>
+      <p className="locked-portrait-hint">Найдите послание в конце сайта</p>
+    </div>
+    </>
   ) : (
     <div className={`${className} placeholder`}>
       <span className="sr-only">Видео персонажа пока не добавлено</span>
@@ -110,9 +104,10 @@ function CharacterVideo({ source, poster, className, slowEnd = true, onEnded }: 
   );
 }
 
-function CharacterVideoLayer({ source, visible, slowEnd, onReady, onEnded }: {
+function CharacterVideoLayer({ source, visible, locked, slowEnd, onReady, onEnded }: {
   source: string;
   visible: boolean;
+  locked: boolean;
   slowEnd: boolean;
   onReady?: () => void;
   onEnded?: () => void;
@@ -123,10 +118,29 @@ function CharacterVideoLayer({ source, visible, slowEnd, onReady, onEnded }: {
   useLayoutEffect(() => { readyRef.current = onReady; }, [onReady]);
   useEffect(() => {
     const video = videoRef.current;
-    return () => {
-      if (video && decodedFrame.current !== null) video.cancelVideoFrameCallback?.(decodedFrame.current);
+    if (!video) return;
+    const markReady = () => {
+      if (decodedFrame.current !== null) return;
+      if (video.requestVideoFrameCallback && !video.paused && !video.ended) {
+        decodedFrame.current = video.requestVideoFrameCallback(() => {
+          decodedFrame.current = null;
+          readyRef.current?.();
+        });
+      } else {
+        readyRef.current?.();
+      }
     };
-  }, []);
+    video.addEventListener('loadeddata', markReady);
+    // Cached media can load before React hydrates and attaches its handlers.
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) markReady();
+    return () => {
+      video.removeEventListener('loadeddata', markReady);
+      if (decodedFrame.current !== null) {
+        video.cancelVideoFrameCallback?.(decodedFrame.current);
+        decodedFrame.current = null;
+      }
+    };
+  }, [source]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -139,7 +153,9 @@ function CharacterVideoLayer({ source, visible, slowEnd, onReady, onEnded }: {
         const slowdownDuration = Math.min(1.2, video.duration / 2);
         const progress = Math.max(0, Math.min(1, 1 - (video.duration - video.currentTime) / slowdownDuration));
         const eased = progress * progress * (3 - 2 * progress);
-        video.playbackRate = 1 - 0.85 * eased;
+        const startProgress = Math.max(0, Math.min(1, video.currentTime / Math.min(0.6, video.duration / 2)));
+        const startEased = startProgress * startProgress * (3 - 2 * startProgress);
+        video.playbackRate = Math.min(0.35 + 0.65 * startEased, 1 - 0.85 * eased);
       }
       frame = requestAnimationFrame(update);
     };
@@ -163,22 +179,11 @@ function CharacterVideoLayer({ source, visible, slowEnd, onReady, onEnded }: {
   return (
     <video
       ref={videoRef}
+      data-locked={locked}
       style={{ opacity: visible ? 1 : 0 }}
       preload="auto"
       autoPlay
       muted
-      onLoadedData={() => {
-        const video = videoRef.current;
-        if (!video) return;
-        if (video.requestVideoFrameCallback) {
-          decodedFrame.current = video.requestVideoFrameCallback(() => {
-            decodedFrame.current = null;
-            readyRef.current?.();
-          });
-        } else {
-          readyRef.current?.();
-        }
-      }}
       onEnded={onEnded}
       playsInline
       aria-label="Видео персонажа"
@@ -188,6 +193,50 @@ function CharacterVideoLayer({ source, visible, slowEnd, onReady, onEnded }: {
       )}
       <source src={source} type="video/webm" />
     </video>
+  );
+}
+
+function useEmailCopy() {
+  const [emailState, setEmailState] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
+  const copyingEmail = useRef(false);
+  useEffect(() => {
+    if (emailState !== 'copied' && emailState !== 'error') return;
+    const timeout = window.setTimeout(() => setEmailState('idle'), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [emailState]);
+
+  async function copyEmail() {
+    if (copyingEmail.current) return;
+    copyingEmail.current = true;
+    setEmailState('copying');
+    try {
+      await navigator.clipboard.writeText(profile.email);
+      setEmailState('copied');
+      playUISound('click');
+      return true;
+    } catch {
+      setEmailState('error');
+    } finally {
+      copyingEmail.current = false;
+    }
+  }
+
+  return { state: emailState, copy: copyEmail };
+}
+
+function CopyFeedback({ text, slide = false }: { text: string; slide?: boolean }) {
+  const reducedMotion = useReducedMotion();
+  return (
+    <span className="copy-feedback" aria-live="polite" aria-atomic="true">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span key={text}
+          initial={{ opacity: 0, y: slide && !reducedMotion ? 8 : 0 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: slide && !reducedMotion ? -8 : 0, transition: { duration: reducedMotion ? 0 : 0.1, ease: 'easeOut' } }}
+          transition={{ duration: reducedMotion ? 0 : slide ? 0.18 : 0.14, ease: 'easeOut' }}
+        >{text}</motion.span>
+      </AnimatePresence>
+    </span>
   );
 }
 
@@ -246,7 +295,6 @@ function PortfolioContent() {
   }, []);
 
   const scrollToSection = (event: MouseEvent<HTMLAnchorElement>) => {
-    playUISound('click');
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const hash = event.currentTarget.hash;
     const target = document.getElementById(hash.slice(1));
@@ -254,7 +302,7 @@ function PortfolioContent() {
     event.preventDefault();
     scrollAnimation.current?.stop();
     const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
-    const destination = Math.max(0, Math.min(
+    const destination = hash === '#about' ? 0 : Math.max(0, Math.min(
       target.getBoundingClientRect().top + window.scrollY - margin,
       document.documentElement.scrollHeight - window.innerHeight,
     ));
@@ -264,28 +312,24 @@ function PortfolioContent() {
       return;
     }
     scrollAnimation.current = animate(window.scrollY, destination, {
-      duration: 0.3,
+      duration: 0.4,
       ease: 'easeOut',
       onUpdate: (top) => window.scrollTo({ top, behavior: 'instant' }),
     });
   };
 
+  const swipeStart = useRef<{ id: number; x: number; y: number } | null>(null);
   const [prefs, setPrefs] = usePreferences();
-  const [panel, setPanel] = useState<Panel>(null);
-  const [renderedPanel, setRenderedPanel] = useState<Exclude<Panel, null>>('contacts');
-  if (panel !== null && panel !== renderedPanel) setRenderedPanel(panel);
-  const [sticky, setSticky] = useState(false);
+  const footerEmail = useEmailCopy();
+  const contactEmail = useEmailCopy();
+  const [paperReset, setPaperReset] = useState(0);
   const [navigation, setNavigation] = useState({
-    id: 'hints',
-    index: 2,
+    id: projects[0].id as string,
+    index: 0,
   });
   const activeProject = navigation.id;
-  const [selected, setSelected] = useState(0);
-  const [carouselStart, setCarouselStart] = useState(0);
-  const [carousel, setCarousel] = useState<CarouselApi>();
-  const [copyState, setCopyState] = useState<string | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
   const introRef = useRef<HTMLElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
   const { add, close } = useToastManager();
   const toastDelay = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const toastDismiss = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -294,7 +338,7 @@ function PortfolioContent() {
     clearTimeout(toastDismiss.current);
   }, []);
 
-  const showUnlockToast = useCallback(() => {
+  const showUnlockToast = useCallback((characterId = 'character-3') => {
     clearTimeout(toastDelay.current);
     clearTimeout(toastDismiss.current);
     close();
@@ -309,7 +353,9 @@ function PortfolioContent() {
           onClick: () => {
             clearTimeout(toastDismiss.current);
             close(toastId);
-            setCarouselStart(2); setSelected(2); setPanel('customize');
+            const index = Math.max(0, characters.findIndex((character) => character.id === characterId));
+            setSelected(index);
+            introRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           },
         },
       });
@@ -330,9 +376,7 @@ function PortfolioContent() {
         clearTimeout(toastDelay.current);
         clearTimeout(toastDismiss.current);
         close();
-        setPanel(null);
-        setCopyState(null);
-        setCarouselStart(0);
+        setPaperReset((value) => value + 1);
         setSelected(0);
         setPrefs((previous) => ({ ...previous, unlocked: [...initialPreferences.unlocked], character: initialPreferences.character }));
       }
@@ -385,12 +429,6 @@ function PortfolioContent() {
   }, [prefs.theme]);
   useEffect(() => {
     const update = () => {
-      const rect = introRef.current?.getBoundingClientRect();
-      // Separate thresholds prevent flicker when scrolling near the boundary.
-      setSticky((visible) => {
-        if (!rect) return false;
-        return visible ? rect.bottom < -24 : rect.bottom <= -48;
-      });
       const entries = projects.map((project) => ({
         id: project.id,
         top:
@@ -419,160 +457,48 @@ function PortfolioContent() {
       window.removeEventListener('resize', update);
     };
   }, []);
-  const openPanel = useCallback(
-    (next: Panel) => {
-      openerRef.current = document.activeElement as HTMLElement | null;
-      setCopyState(null);
-      if (next === 'customize') {
-        const index = Math.max(0, characters.findIndex((c) => c.id === prefs.character));
-        setCarouselStart(index);
-        setSelected(index);
-      }
-      setPanel(next);
-    },
-    [prefs.character],
-  );
-  useEffect(() => {
-    const shortcuts = (event: KeyboardEvent) => {
-      if (
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.repeat ||
-        panel ||
-        (event.target instanceof HTMLElement &&
-          (event.target.isContentEditable ||
-            event.target.closest('input,textarea,select')))
-      )
-        return;
-      if (event.code === 'KeyC' || ['c', 'с', 'ц'].includes(event.key.toLowerCase())) {
-        event.preventDefault();
-        openPanel('contacts');
-      }
-      if (event.code === 'KeyR' || event.key.toLowerCase() === 'r' || event.key.toLowerCase() === 'к') {
-        event.preventDefault();
-        window.open(profile.resumeUrl, '_blank', 'noopener,noreferrer');
-      }
-    };
-    window.addEventListener('keydown', shortcuts);
-    return () => window.removeEventListener('keydown', shortcuts);
-  }, [panel, openPanel]);
+  const activeIndex = selected ?? Math.max(0, characters.findIndex(c => c.id === prefs.character));
+  const current = characters[activeIndex];
   useLayoutEffect(() => {
-    if (panel === 'customize') carousel?.scrollTo(carouselStart, true);
-  }, [carousel, carouselStart, panel]);
+    const root = document.documentElement;
+    root.classList.add('skin-changing');
+    root.dataset.skin = current.id;
+    const timeout = window.setTimeout(() => root.classList.remove('skin-changing'), 350);
+    return () => { window.clearTimeout(timeout); root.classList.remove('skin-changing'); };
+  }, [current.id]);
+  const isUnlocked = prefs.unlocked.includes(current.id);
   useEffect(() => {
-    if (!carousel) return;
-    let current = carousel.selectedScrollSnap();
-    const select = () => {
-      const next = carousel.selectedScrollSnap();
-      if (next !== current) playUISound('hover', 1);
-      current = next;
-      setSelected(next);
-    };
-    const area = carousel.rootNode();
-    let accumulated = 0;
-    let lastWheel = 0;
-    let direction = 0;
-    let switched = false;
-    const wheel = (event: WheelEvent) => {
-      if (event.ctrlKey) return;
-      event.preventDefault();
-      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-      if (!delta) return;
-      const now = performance.now();
-      const nextDirection = Math.sign(delta);
-      if (now - lastWheel > 160 || direction !== nextDirection) {
-        accumulated = 0;
-        switched = false;
-      }
-      lastWheel = now;
-      direction = nextDirection;
-      accumulated += delta * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? area.clientWidth : 1);
-      if (!switched && Math.abs(accumulated) >= 24) {
-        if (direction > 0) carousel.scrollNext();
-        else carousel.scrollPrev();
-        switched = true;
-      }
-    };
-    area.addEventListener('wheel', wheel, { passive: false });
-    carousel.on('select', select);
-    return () => {
-      area.removeEventListener('wheel', wheel);
-      carousel.off('select', select);
-    };
-  }, [carousel]);
-  useEffect(() => {
-    if (!copyState) return;
-    const timeout = window.setTimeout(() => setCopyState(null), 2400);
-    return () => window.clearTimeout(timeout);
-  }, [copyState]);
-
-  async function copyContact(kind: 'email' | 'telegram') {
-    try {
-      await navigator.clipboard.writeText(
-        kind === 'email' ? profile.email : profile.telegram,
-      );
-      setCopyState(kind);
-
-    } catch {
-      setCopyState('error');
+    if (selected !== null && isUnlocked && prefs.character !== current.id) {
+      setPrefs(previous => applyCharacter(previous, current.id));
     }
-  }
-
-  const current = characters.find((c) => c.id === prefs.character);
-  const preview = characters[selected];
-  const canApply = prefs.unlocked.includes(preview.id);
-  const resume = (compact = false) => (
-    <a
-      href={profile.resumeUrl}
-      target="_blank"
-      rel="noreferrer"
-      className={`control ${compact ? 'compact-control' : 'main-control'}`}
-      onClick={() => playUISound('click')}
-    >
-      Резюме<kbd>R</kbd>
-    </a>
+  }, [selected, isUnlocked, prefs.character, current.id, setPrefs]);
+  const chooseStyle = (index: number) => {
+    playUISound('click');
+    setSelected(index);
+    setPrefs(previous => applyCharacter(previous, characters[index].id));
+  };
+  const unlockFromContact = () => {
+    if (!prefs.unlocked.includes('corporate')) {
+      setPrefs(previous => unlockContact(previous));
+      showUnlockToast('corporate');
+    }
+  };
+  const contactLinks = (compact = false) => (
+    <>
+      <a href={profile.telegramUrl} target="_blank" rel="noreferrer" onClick={unlockFromContact}
+        className={`control primary-control ${compact ? 'compact-control' : 'main-control'}`}>Telegram</a>
+      <button type="button" onClick={async () => { if (await contactEmail.copy()) unlockFromContact(); }}
+        disabled={contactEmail.state === 'copying'}
+        className={`control primary-control ${compact ? 'compact-control' : 'main-control'}`}>
+        <CopyFeedback slide text={contactEmail.state === 'copied' ? 'Скопировано' : contactEmail.state === 'error' ? 'Не удалось' : 'Почта'} />
+      </button>
+      <a href={profile.resumeUrl} target="_blank" rel="noreferrer" onClick={() => playUISound('click')}
+        className={`control resume-control ${compact ? 'compact-control' : 'main-control'}`}>Посмотреть резюме</a>
+    </>
   );
 
   return (
-    <Dialog
-      open={panel !== null}
-      onOpenChange={(open) => {
-        if (!open) setPanel(null);
-      }}
-    >
-      <header
-        className="sticky-header"
-        data-visible={sticky}
-        aria-hidden={!sticky}
-        inert={!sticky}
-        aria-label="Закреплённая шапка"
-      >
-        <div className="sticky-inner">
-          <a className="sticky-profile" href="#about" aria-label="Обо мне">
-            <span>
-              <span>{profile.name}</span>
-              <span className="secondary">{profile.role}</span>
-            </span>
-          </a>
-          <div className="sticky-actions">
-            {resume(true)}
-            <button
-              type="button"
-              className="control primary-control sticky-contact"
-              onClick={() => {
-                playUISound('click');
-                openPanel('contacts');
-              }}
-              aria-label="Контакты"
-            >
-              <span>Контакты</span>
-              <kbd>C</kbd>
-              <AnimatedIcon name="mail" className="mobile-mail" size={18} />
-            </button>
-          </div>
-        </div>
-      </header>
+    <>
       <main className="portfolio">
         <section
           className="intro"
@@ -580,59 +506,56 @@ function PortfolioContent() {
           aria-label="Обо мне"
           ref={introRef}
         >
-          <div className="customize-toolbar">
-            <button
-              className="control customize-button"
-              type="button"
-              onClick={() => {
-                playUISound('click');
-                openPanel('customize');
-              }}
-            >
-              <AnimatedIcon name="palette" size={16} />
-              <span>Кастомизация</span>
-              <span className="secondary">{prefs.unlocked.length} из {characters.length}</span>
-            </button>
-            <button
-              className="control icon-control"
-              type="button"
-              aria-label={
-                prefs.theme === 'light'
-                  ? 'Включить тёмную тему'
-                  : 'Включить светлую тему'
-              }
-              onClick={() => {
-                playUISound('toggle');
-                setPrefs((previous) => ({
-                  ...previous,
-                  theme: previous.theme === 'light' ? 'dark' : 'light',
-                }));
-              }}
-            >
-              <ThemeIcon theme={prefs.theme} />
-            </button>
+          <div className="customize-toolbar inline-style-switcher">
+              <button className="control icon-control" type="button" aria-label="Предыдущий стиль"
+                onClick={() => chooseStyle((activeIndex + characters.length - 1) % characters.length)}><AnimatedIcon name="chevronLeft" trigger="click" size={16} /></button>
+            <div className="style-dots" role="group" aria-label="Стили персонажа">
+              {characters.map((character, index) => (
+                <button key={character.id} type="button" className="style-dot-hit"
+                  aria-label={`${character.name}${prefs.unlocked.includes(character.id) ? '' : ', закрыт'}`}
+                  aria-pressed={index === activeIndex} onClick={() => chooseStyle(index)}>
+                  <motion.span style={{ backgroundColor: index === activeIndex ? 'var(--accent)' : 'var(--foreground)' }} animate={{ width: index === activeIndex ? 12 : 4, opacity: index === activeIndex ? 1 : 0.3 }}
+                    transition={{ duration: reducedMotion ? 0 : 0.18, ease: 'easeOut' }} />
+                </button>
+              ))}
+            </div>
+              <button className="control icon-control" type="button" aria-label="Следующий стиль"
+                onClick={() => chooseStyle((activeIndex + 1) % characters.length)}><AnimatedIcon name="chevronRight" trigger="click" size={16} /></button>
           </div>
-          <div className="portrait-entry">
+          <div className="portrait-entry"
+            onPointerDown={event => {
+              if (event.pointerType !== 'touch' || !event.isPrimary) return;
+              swipeStart.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerCancel={() => { swipeStart.current = null; }}
+            onPointerUp={event => {
+              const start = swipeStart.current;
+              swipeStart.current = null;
+              if (!start || start.id !== event.pointerId) return;
+              const dx = event.clientX - start.x;
+              const dy = event.clientY - start.y;
+              if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+              chooseStyle((activeIndex + (dx < 0 ? 1 : -1) + characters.length) % characters.length);
+            }}
+            onPointerEnter={event => {
+            if (event.pointerType !== 'mouse' || reducedMotion) return;
+            const layers = Array.from(event.currentTarget.querySelectorAll('video'));
+            const video = layers.find(layer => layer.style.opacity === '1') ?? layers.at(-1);
+            if (!video || (!video.paused && !video.ended)) return;
+            video.currentTime = 0;
+            video.playbackRate = 0.35;
+            void video.play().catch(() => {});
+          }}>
             <CharacterVideo
-              className="portrait"
+              locked={!isUnlocked}
+              className={`portrait${isUnlocked ? '' : ' is-locked'}`}
               source={prefs.theme === 'dark' ? current?.darkVideo ?? current?.video ?? profile.defaultDarkVideo : current?.video ?? profile.defaultVideo}
               poster={prefs.theme === 'dark' ? current?.darkPoster ?? current?.poster ?? profile.defaultDarkPoster : current?.poster ?? profile.defaultPoster}
             />
           </div>
           <div className="bio text-block">
-            <h1 className="intro-name" aria-label={profile.name}>
-              {profile.name.split(' ').map((word, index) => (
-                <span className="name-mask" key={word} aria-hidden="true">
-                  <span
-                    style={{
-                      animationDelay: `calc(var(--name-start-delay) + ${index * 100}ms)`,
-                    }}
-                  >
-                    {word}
-                  </span>
-                </span>
-              ))}
-            </h1>
+            <h1 className="intro-name">{profile.name}</h1>
             <p className="secondary">
               Дизайнер продукта, ориентирующийся
               <br className="bio-break" /> на понятность и удобства интерфейса
@@ -643,17 +566,7 @@ function PortfolioContent() {
             <p className="secondary">{description.slice(0, -5)}<span className="avito-label">Avito<AvitoSticker /></span></p>
           </div>
           <div className="intro-actions">
-            {resume()}
-            <button
-              className="control main-control primary-control"
-              type="button"
-              onClick={() => {
-                playUISound('click');
-                openPanel('contacts');
-              }}
-            >
-              Контакты<kbd>C</kbd>
-            </button>
+            {contactLinks()}
           </div>
         </section>
         <section className="projects" aria-label="Проекты">
@@ -665,20 +578,11 @@ function PortfolioContent() {
                 animate={markerControls}
                 aria-hidden="true"
               />
-              <a
-                href="#about"
-                onMouseEnter={() => playUISound('hover', 0.7)}
-                onClick={scrollToSection}
-              >
-                Обо мне
-              </a>
-              <hr />
               {projects.map((project) => (
                 <a
                   key={project.id}
                   href={`#${project.id}`}
-                  onMouseEnter={() => playUISound('hover', 0.7)}
-                  onClick={scrollToSection}
+                    onClick={scrollToSection}
                   className={activeProject === project.id ? 'active' : ''}
                   aria-current={
                     activeProject === project.id ? 'location' : undefined
@@ -705,180 +609,32 @@ function PortfolioContent() {
                 aria-label={project.label.replace('\n', ' ')}
               >
                 <figure>
-                  <div className="case-media placeholder">
-                    <span className="sr-only">
-                      {project.label}: изображение пока не добавлено
-                    </span>
-                  </div>
-                  <figcaption>{description}</figcaption>
+                  <ProjectVideo source={project.video} poster={project.poster} label={project.label} />
+                  <figcaption>Описание проекта «{project.label}» скоро появится.</figcaption>
                 </figure>
               </article>
             ))}
           </div>
           <footer className="footer">
-            <FooterSignature />
-            <div className="footer-links">
-              <a href={`mailto:${profile.email}`}
-                onMouseEnter={() => playUISound('hover', 0.7)}
-                onClick={() => playUISound('click')}
-              >Почта</a>
-              <a href={profile.telegramUrl} target="_blank" rel="noreferrer"
-                onMouseEnter={() => playUISound('hover', 0.7)}
-                onClick={() => playUISound('click')}
-              >
-                Telegram
-              </a>
-            </div>
-          </footer>
-        </section>
-      </main>
-      <DialogContent
-        className={`portfolio-dialog ${renderedPanel === 'contacts' ? 'contacts-dialog' : 'customize-dialog'}`}
-        showCloseButton={false}
-        finalFocus={openerRef}
-      >
-        <DialogClose
-          className="sheet-handle"
-          aria-label="Закрыть окно"
-        >
-          <span />
-        </DialogClose>
-        <div className="modal-heading">
-          <DialogTitle className="modal-title">
-            {renderedPanel === 'contacts' ? 'Контакты' : `${profile.name}, ${preview.id === 'character-3' ? '7 лет' : '21 год'}`}
-          </DialogTitle>
-          <DialogClose
-            className="control icon-control desktop-close"
-            aria-label="Закрыть окно"
-          >
-            <AnimatedIcon name="close" size={16} />
-          </DialogClose>
-        </div>
-        {renderedPanel === 'contacts' ? (
-          <>
-            <div className="contact-list">
-              {(['email', 'telegram'] as const).map((kind) => (
-                <button
-                  className="contact-row"
-                  key={kind}
-                  type="button"
-                  onClick={() => copyContact(kind)}
-                  aria-label={`Скопировать ${kind === 'email' ? 'email' : 'Telegram'}`}
-                >
-                  {kind === 'telegram'
-                    ? <Send size={20} aria-hidden="true" />
-                    : <AnimatedIcon name="link" size={20} />}
-                  <span>
-                    <span className="secondary">
-                      {copyState === kind
-                        ? 'Скопировано'
-                        : kind === 'email'
-                          ? 'Email'
-                          : 'Telegram'}
-                    </span>
-                    <span>
-                      {kind === 'email' ? profile.email : profile.telegram}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-            {copyState === 'error' && (
-              <output className="copy-error">
-                Не удалось скопировать. Выделите адрес и скопируйте вручную.
-              </output>
-            )}
-            <ContactPaper onReveal={() => {
+            <ContactPaper key={paperReset} onReveal={() => {
               if (prefs.unlocked.includes('character-3')) return;
               setPrefs((previous) => unlockMessage(previous));
               showUnlockToast();
             }} />
-          </>
-        ) : (
-          <>
-            <div className="character-preview">
-              <CharacterVideo
-                className={`character-preview-media${canApply ? '' : ' is-locked'}`}
-                source={prefs.theme === 'dark' ? preview.darkVideo ?? preview.video : preview.video}
-                poster={prefs.theme === 'dark' ? preview.darkPoster ?? preview.poster : preview.poster}
-              />
+            <div className="footer-links">
+              <button type="button" className="footer-copy" onClick={footerEmail.copy} disabled={footerEmail.state === 'copying'}>
+                <span className="footer-copy-sizer" aria-hidden="true">Скопировать почту</span>
+                <CopyFeedback slide text={footerEmail.state === 'copied' ? 'Скопировано' : footerEmail.state === 'error' ? 'Не удалось' : 'Скопировать почту'} />
+              </button>
+              <a href={profile.telegramUrl} target="_blank" rel="noreferrer">Telegram</a>
+              <span className="footer-divider" aria-hidden="true" />
+              <a href={profile.resumeUrl} target="_blank" rel="noreferrer">CV</a>
             </div>
-            <div className="style-controls">
-              <p className="style-label secondary">Стили</p>
-              <Carousel
-                className="character-carousel"
-                opts={{ align: 'center', containScroll: false, duration: reducedMotion ? 0 : 20, startIndex: carouselStart }}
-                setApi={setCarousel}
-                aria-label="Персонажи"
-                aria-roledescription="карусель"
-              >
-                <CarouselContent className="character-track">
-                  {characters.map((character, index) => (
-                    <CarouselItem
-                      className="character-slide"
-                      key={character.id}
-                      aria-roledescription="персонаж"
-                    >
-                      <button
-                        className={`character-tile ${selected === index ? 'selected' : ''}`}
-                        type="button"
-                        onClick={() => {
-                          carousel?.scrollTo(index);
-                        }}
-                        aria-label={`${character.name}${prefs.unlocked.includes(character.id) ? '' : ', закрыт'}`}
-                        aria-pressed={selected === index}
-                      >
-                        {(prefs.theme === 'dark' ? character.darkPoster ?? character.poster : character.poster) && (
-                          <Image
-                            width={64}
-                            height={64}
-                            unoptimized
-                            className={`character-tile-image${prefs.unlocked.includes(character.id) ? '' : ' is-locked'}`}
-                            src={(prefs.theme === 'dark' ? character.darkPoster ?? character.poster : character.poster) ?? ''}
-                            alt=""
-                            draggable={false}
-                          />
-                        )}
-                      </button>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
-              <p className="character-name" aria-live="polite">
-                {preview.name}
-              </p>
-              <div className="style-action">
-                {canApply ? (
-                  <button
-                    className="control primary-control apply-control"
-                    type="button"
-                    onClick={() => {
-                      playUISound('click', 0.65);
-                      setPrefs((previous) =>
-                        applyCharacter(previous, preview.id),
-                      );
-                      setPanel(null);
-                    }}
-                  >
-                    Применить
-                  </button>
-                ) : (
-                  <p className="locked-message">
-                    <LockKeyhole size={16} aria-hidden="true" />
-                    <span>
-                      {preview.unlock === 'message'
-                        ? 'Найдите послание в контактах'
-                        : 'Этот персонаж пока недоступен'}
-                    </span>
-                  </p>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-      </DialogContent>
+          </footer>
+        </section>
+      </main>
       <Notifications />
-    </Dialog>
+    </>
   );
 }
 

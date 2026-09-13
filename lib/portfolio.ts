@@ -7,7 +7,7 @@ export type Character = {
   darkPoster?: string;
   darkTransitionVideo?: string;
   darkTransitionPoster?: string;
-  unlock: 'message' | null;
+  unlock: 'message' | 'contact' | null;
 };
 export const profile = {
   name: 'Данила Плешаков',
@@ -16,16 +16,16 @@ export const profile = {
   telegram: '@daniladedu',
   telegramUrl: 'https://t.me/daniladedu',
   resumeUrl: '/resume',
-  defaultVideo: '/videos/corporate-idle-stable.webm' as string | null,
-  defaultPoster: '/videos/corporate-idle-stable.png' as string | null,
+  defaultVideo: '/videos/vladivostok-light-idle.webm' as string | null,
+  defaultPoster: '/videos/vladivostok-light-idle.png' as string | null,
   darkTransitionVideo: '/videos/corporate-dark-switch.webm',
   darkTransitionPoster: '/videos/corporate-dark-switch.png',
-  defaultDarkVideo: '/videos/corporate-dark-idle.webm',
-  defaultDarkPoster: '/videos/corporate-dark-idle.png',
+  defaultDarkVideo: '/videos/vladivostok-dark-idle.webm',
+  defaultDarkPoster: '/videos/vladivostok-dark-idle.png',
 };
 export const characters: Character[] = [
+  { id: 'character-2', name: '+Вайбик', video: '/videos/vladivostok-light-idle.webm', poster: '/videos/vladivostok-light-idle.png', darkVideo: '/videos/vladivostok-dark-idle.webm', darkPoster: '/videos/vladivostok-dark-idle.png', darkTransitionVideo: '/videos/vladivostok-dark-switch.webm', darkTransitionPoster: '/videos/vladivostok-dark-switch.png', unlock: null },
   { id: 'corporate', name: 'Корпорат', video: '/videos/corporate-idle-stable.webm', poster: '/videos/corporate-idle-stable.png', darkVideo: '/videos/corporate-dark-idle.webm', darkPoster: '/videos/corporate-dark-idle.png', unlock: null },
-  { id: 'character-2', name: 'Владивосток 2000', video: '/videos/vladivostok-light-idle.webm', poster: '/videos/vladivostok-light-idle.png', darkVideo: '/videos/vladivostok-dark-idle.webm', darkPoster: '/videos/vladivostok-dark-idle.png', darkTransitionVideo: '/videos/vladivostok-dark-switch.webm', darkTransitionPoster: '/videos/vladivostok-dark-switch.png', unlock: null },
   { id: 'character-3', name: 'Обратно в 1 класс', video: '/videos/school-light-idle.webm', poster: '/videos/school-light-idle.png', darkVideo: '/videos/school-dark-idle-short.webm', darkPoster: '/videos/school-dark-idle-short.png', darkTransitionVideo: '/videos/school-dark-switch-hair.webm', darkTransitionPoster: '/videos/school-dark-switch-hair.png', unlock: 'message' },
 ];
 export const safariVideoSources: Record<string, string> = {
@@ -39,12 +39,11 @@ export const safariVideoSources: Record<string, string> = {
 export const description =
   'Весь последний год работал над улучшением пользовательского опыта при использовании статистики в Avito';
 export const projects = [
-  { id: 'typer', label: 'Тайпер', image: null },
-  { id: 'comparison', label: 'Сравнение\nс конкурентами', image: null },
-  { id: 'hints', label: 'Новые подсказки', image: null },
-  { id: 'promotion', label: 'Таймлайн продвижения', image: null },
-  { id: 'search', label: 'Место в поиске\nв реальном времени', image: null },
-  { id: 'a-motion', label: 'А-motion', image: null },
+  { id: 'search', label: 'Real Time', video: '/projects/realtime.mp4', poster: '/projects/realtime.jpg' },
+  { id: 'typer', label: 'Edit', video: '/projects/edit.mp4?v=2', poster: '/projects/edit.jpg?v=2' },
+  { id: 'comparison', label: 'Подборка конкурентов', video: '/projects/comparison.mp4', poster: '/projects/comparison.jpg' },
+  { id: 'promotion', label: 'Таймлайны', video: '/projects/timelines.mp4', poster: '/projects/timelines.jpg' },
+  { id: 'hints', label: 'Подсказки', video: '/projects/hints.mp4', poster: '/projects/hints.jpg' },
 ] as const;
 export type Preferences = {
   theme: 'light' | 'dark';
@@ -54,23 +53,23 @@ export type Preferences = {
 };
 export const initialPreferences: Preferences = {
   theme: 'light',
-  unlocked: ['corporate', 'character-2'],
-  character: 'corporate',
-  unlockVersion: 2,
+  unlocked: ['character-2', 'corporate'],
+  character: 'character-2',
+  unlockVersion: 3,
 };
 export const preferenceKey = 'danila-portfolio-v1';
 export function readPreferences(raw: string | null): Preferences {
   try {
     const value = JSON.parse(raw || 'null');
     const unlocked = [...initialPreferences.unlocked];
-    if (value?.unlockVersion === 2 && Array.isArray(value?.unlocked) && value.unlocked.includes('character-3')) {
+    if ([2, 3].includes(value?.unlockVersion) && Array.isArray(value?.unlocked) && value.unlocked.includes('character-3')) {
       unlocked.push('character-3');
     }
     return {
-      unlockVersion: 2,
+      unlockVersion: 3,
       theme: value?.theme === 'dark' ? 'dark' : 'light',
       unlocked,
-      character: unlocked.includes(value?.character) ? value.character : 'corporate',
+      character: unlocked.includes(value?.character) ? value.character : 'character-2',
     };
   } catch {
     return { ...initialPreferences, unlocked: [...initialPreferences.unlocked] };
@@ -85,4 +84,10 @@ export function applyCharacter(prefs: Preferences, id: string): Preferences {
   return prefs.unlocked.includes(id) && characters.some((c) => c.id === id)
     ? { ...prefs, character: id }
     : prefs;
+}
+
+export function unlockContact(prefs: Preferences): Preferences {
+  return prefs.unlocked.includes('corporate')
+    ? prefs
+    : { ...prefs, unlockVersion: 3, unlocked: [...prefs.unlocked, 'corporate'] };
 }

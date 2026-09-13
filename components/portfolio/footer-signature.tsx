@@ -11,7 +11,7 @@ export function FooterSignature() {
   const reducedMotion = useReducedMotion();
 
   return (
-    <p className="signature signature-animated" aria-label="made with love">
+    <span className="signature signature-animated" aria-label="made with love">
       <span className="signature-spacer" aria-hidden="true">made with love</span>
       <motion.svg
         className="signature-drawing"
@@ -46,6 +46,6 @@ export function FooterSignature() {
           {signature.paths.map((d, index) => <path key={index} d={d} />)}
         </g>
       </motion.svg>
-    </p>
+    </span>
   );
 }

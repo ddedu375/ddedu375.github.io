@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createScratchSound } from '@/lib/scratch-sound';
 
 type Point = { x: number; y: number };
 
 export function usePaperEraser(onReveal: () => void) {
+  const [canReplay, setCanReplay] = useState(false);
+  const restore = useRef<() => void>(() => {});
   const surface = useRef<HTMLButtonElement>(null);
   const coating = useRef<HTMLDivElement>(null);
   const revealCallback = useRef(onReveal);
@@ -32,16 +34,16 @@ export function usePaperEraser(onReveal: () => void) {
     let maskInitialized = false;
 
     const checkProgress = () => {
-      if (unlocked) return;
       const pixels = context.getImageData(0, 0, mask.width, mask.height).data;
       let remaining = 0;
       for (let i = 3; i < pixels.length; i += 4) remaining += pixels[i] / 255;
-      if (remaining <= mask.width * mask.height * 0.5) {
+      setCanReplay(remaining <= mask.width * mask.height * 0.2);
+      if (!unlocked && remaining <= mask.width * mask.height * 0.3) {
         unlocked = true;
         revealCallback.current();
       }
     };
-    const paintMask = () => {
+    const paintMask = (fadeIn = false) => {
       const revision = ++maskRevision;
       const image = new Image();
       image.src = mask.toDataURL();
@@ -52,6 +54,12 @@ export function usePaperEraser(onReveal: () => void) {
         const url = `url("${image.src}")`;
         layer.style.setProperty('-webkit-mask-image', url);
         layer.style.maskImage = url;
+        if (fadeIn && !reduced.matches) {
+          layer.animate([{ opacity: 0 }, { opacity: 1 }], {
+            duration: 180,
+            easing: 'ease-out',
+          });
+        }
       }).catch(() => {});
     };
     const resize = () => {
@@ -156,6 +164,17 @@ export function usePaperEraser(onReveal: () => void) {
       if (frame) cancelAnimationFrame(frame);
       frame = 0; pending = null; previous = null;
     };
+    restore.current = () => {
+      reset();
+      revealed = false;
+      context.globalCompositeOperation = 'source-over';
+      context.fillStyle = '#fff';
+      context.fillRect(0, 0, mask.width, mask.height);
+      paintMask(true);
+      setCanReplay(false);
+      area.setAttribute('aria-label', 'Сотрите бумажку пальцем или с зажатой кнопкой мыши, чтобы открыть стиль. Или нажмите Enter.');
+      area.focus({ preventScroll: true });
+    };
     const reveal = (event: KeyboardEvent) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
@@ -173,6 +192,7 @@ export function usePaperEraser(onReveal: () => void) {
     area.addEventListener('keydown', reveal);
     return () => {
       disposed = true;
+      restore.current = () => {};
       reset(); observer.disconnect(); sound.dispose();
       particles.forEach((particle) => particle.remove());
       area.removeEventListener('pointermove', move);
@@ -183,5 +203,5 @@ export function usePaperEraser(onReveal: () => void) {
       area.removeEventListener('keydown', reveal);
     };
   }, []);
-  return { surface, coating };
+  return { surface, coating, canReplay, replay: () => restore.current() };
 }
