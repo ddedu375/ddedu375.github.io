@@ -43,7 +43,7 @@ export function VisitorLetter() {
   useEffect(() => {
     setMounted(true);
     let alive = true;
-    const deadline = Date.now() + 120_000;
+    const deadline = Date.now() + 180_000;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try { seen.current = localStorage.getItem(seenKey) === '1'; } catch { /* Storage is optional. */ }
     loaded.current = Promise.all(images.map(src => new Promise<void>((resolve, reject) => {

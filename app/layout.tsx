@@ -26,7 +26,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'Данила Плешаков — дизайнер продукта',
-  description: 'Продуктовый дизайн, понятные и удобные интерфейсы.',
+  description: 'Данила Плешаков — дизайнер продукта. Люблю прорабатывать взаимодействие с интерфейсом. Считаю, что дизайн — magic.',
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({

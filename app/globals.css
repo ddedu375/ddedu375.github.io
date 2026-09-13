@@ -793,7 +793,7 @@ html[data-theme='dark'][data-skin='character-3'] { --accent: #42cf7c; }
   inset: auto;
   width: 100%;
   height: auto;
-  min-height: 60px;
+  min-height: 0;
   background: var(--foreground);
   color: var(--background);
   border: 0;
