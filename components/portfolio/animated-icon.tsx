@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { useReducedMotion } from 'motion/react';
+import { ArrowLeftIcon } from '@/components/icons/arrow-left';
+import { DownloadIcon } from '@/components/icons/download';
 import { PaletteIcon } from '@/components/icons/palette';
 import { LinkIcon } from '@/components/icons/link';
 import { XIcon } from '@/components/icons/x';
@@ -15,6 +17,8 @@ type AnimationHandle = {
   stopAnimation: () => void;
 };
 const icons = {
+  arrowLeft: ArrowLeftIcon,
+  download: DownloadIcon,
   chevronLeft: ChevronLeftIcon,
   chevronRight: ChevronRightIcon,
   palette: PaletteIcon,

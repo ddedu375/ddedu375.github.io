@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Caveat } from 'next/font/google';
 import './globals.css';
+import { VisitorLetter } from '@/components/portfolio/visitor-letter';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -25,7 +26,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Данила Плешаков — дизайнер продукта',
+  title: 'Данила Плешаков',
   description: 'Данила Плешаков — дизайнер продукта. Люблю прорабатывать взаимодействие с интерфейсом. Считаю, что дизайн — magic.',
   icons: { icon: '/favicon.svg' },
 };
@@ -41,6 +42,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${signature.variable}`}
       >
         {children}
+        <VisitorLetter />
       </body>
     </html>
   );

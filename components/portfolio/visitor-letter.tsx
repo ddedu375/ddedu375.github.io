@@ -3,15 +3,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'motion/react';
+import { usePathname } from 'next/navigation';
 import { AnimatedIcon } from './animated-icon';
 import { playUISound } from '@/lib/ui-sounds.js';
 
 const seenKey = 'danila-visitor-letter-seen-v1';
+const deadlineKey = 'danila-visitor-letter-deadline-v1';
+const activeKey = 'danila-visitor-letter-active-v1';
 const images = ['/letter/crumpled.png', '/letter/partial.png', '/letter/open.png'];
 type Stage = 'hidden' | 'crumpled' | 'partial' | 'open';
+type Flight = { left: number; top: number; x: number; y: number; rotation: number; id: number };
+type SavedLetter = { path: string; stage: Exclude<Stage, 'hidden'>; flight: Flight };
+function saveLetter(value: SavedLetter | null) {
+  try {
+    if (value) sessionStorage.setItem(activeKey, JSON.stringify(value));
+    else sessionStorage.removeItem(activeKey);
+  } catch { /* Storage is optional. */ }
+}
 
 export function VisitorLetter() {
+  const pathname = usePathname();
   const [stage, setStage] = useState<Stage>('hidden');
+  const [ownerPath, setOwnerPath] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [flight, setFlight] = useState({ left: 24, top: 160, x: 0, y: -500, rotation: -160, id: 0 });
   const dialog = useRef<HTMLDialogElement>(null);
@@ -30,20 +44,36 @@ export function VisitorLetter() {
     const edge = Math.floor(Math.random() * 4);
     const startX = edge === 0 ? -size : edge === 1 ? width + size : Math.random() * width;
     const startY = edge === 2 ? -size : edge === 3 ? height + size : Math.random() * height;
-    setFlight(previous => ({ left, top, x: startX - left, y: startY - top, rotation: (Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 120), id: previous.id + 1 }));
+    const nextFlight = { left, top, x: startX - left, y: startY - top, rotation: (Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 120), id: Date.now() };
+    saveLetter({ path: pathname, stage: 'crumpled', flight: nextFlight });
+    setOwnerPath(pathname);
+    setRestored(false);
+    setFlight(nextFlight);
     setStage('crumpled');
-  }, []);
+  }, [pathname]);
+
+  const changeStage = (next: Stage) => {
+    saveLetter(next === 'hidden' ? null : { path: pathname, stage: next, flight });
+    setRestored(false);
+    setStage(next);
+  };
 
   useEffect(() => {
-    if (stage !== 'crumpled') return;
+    if (stage !== 'crumpled' || restored || ownerPath !== pathname) return;
     const timeout = window.setTimeout(() => playUISound('letterImpact'), reduced ? 0 : 850);
     return () => window.clearTimeout(timeout);
-  }, [stage, flight.id, reduced]);
+  }, [stage, flight.id, reduced, restored, ownerPath, pathname]);
 
   useEffect(() => {
     setMounted(true);
+    setStage('hidden');
     let alive = true;
-    const deadline = Date.now() + 180_000;
+    let deadline = Date.now() + 180_000;
+    try {
+      const savedDeadline = Number(sessionStorage.getItem(deadlineKey));
+      if (Number.isFinite(savedDeadline) && savedDeadline > 0) deadline = savedDeadline;
+      else sessionStorage.setItem(deadlineKey, String(deadline));
+    } catch { /* Without storage, keep the timer for the current page. */ }
     let timer: ReturnType<typeof setTimeout> | undefined;
     try { seen.current = localStorage.getItem(seenKey) === '1'; } catch { /* Storage is optional. */ }
     loaded.current = Promise.all(images.map(src => new Promise<void>((resolve, reject) => {
@@ -54,6 +84,20 @@ export function VisitorLetter() {
     }))).then(() => {});
     // Keep load errors handled even when no letter is requested yet.
     void loaded.current.catch(() => {});
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(activeKey) ?? 'null') as SavedLetter | null;
+      if (saved?.path === pathname && ['crumpled', 'partial', 'open'].includes(saved.stage) &&
+          saved.flight && Object.values(saved.flight).length === 6 && Object.values(saved.flight).every(Number.isFinite)) {
+        seen.current = true;
+        void loaded.current.then(() => {
+          if (!alive) return;
+          setOwnerPath(pathname);
+          setFlight(saved.flight);
+          setRestored(true);
+          setStage(saved.stage === 'open' ? 'partial' : saved.stage);
+        }).catch(() => {});
+      }
+    } catch { /* Ignore an invalid or unavailable saved letter. */ }
     const arrive = () => {
       if (!alive || seen.current || document.hidden) return;
       if (document.querySelector('dialog[open]')) {
@@ -61,6 +105,7 @@ export function VisitorLetter() {
         return;
       }
       void loaded.current.then(() => {
+        try { if (localStorage.getItem(seenKey) === '1') seen.current = true; } catch { /* Storage is optional. */ }
         if (alive && !seen.current && !document.hidden) show();
       }).catch(() => {});
     };
@@ -94,10 +139,10 @@ export function VisitorLetter() {
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('storage', storage);
     };
-  }, [show]);
+  }, [show, pathname]);
 
   useEffect(() => {
-    if (stage !== 'open') return;
+    if (stage !== 'open' || ownerPath !== pathname) return;
     const element = dialog.current;
     const overflow = document.body.style.overflow;
     const padding = document.body.style.paddingRight;
@@ -111,9 +156,9 @@ export function VisitorLetter() {
       document.body.style.paddingRight = padding;
       if (previousFocus.current?.isConnected) previousFocus.current.focus({ preventScroll: true });
     };
-  }, [stage]);
+  }, [stage, ownerPath, pathname]);
 
-  if (!mounted) return null;
+  if (!mounted || ownerPath !== pathname) return null;
   return createPortal(<>
 
       {(stage === 'crumpled' || stage === 'partial') && <motion.button
@@ -122,25 +167,25 @@ export function VisitorLetter() {
         className={`visitor-letter visitor-letter-${stage}`}
         type="button"
         aria-label={stage === 'crumpled' ? 'Развернуть письмо' : 'Прочитать письмо'}
-        initial={reduced ? false : stage === 'crumpled' ? { x: flight.x, y: flight.y, rotate: flight.rotation, scale: 0.45 } : { scale: 0.94, rotate: -4 }}
+        initial={reduced || restored ? false : stage === 'crumpled' ? { x: flight.x, y: flight.y, rotate: flight.rotation, scale: 0.45 } : { scale: 0.94, rotate: -4 }}
         animate={{ x: 0, y: 0, rotate: stage === 'crumpled' ? 8 : -4, scale: 1 }}
         transition={{ duration: reduced ? 0 : stage === 'crumpled' ? 1 : 0.18, ease: [0.2, 0.7, 0.2, 1] }}
         whileTap={{ scale: 0.97, transition: { duration: 0.15, ease: 'easeOut' } }}
         onClick={() => {
           playUISound('paperRustle');
-          if (stage === 'crumpled') setStage('partial');
+          if (stage === 'crumpled') changeStage('partial');
           else {
             previousFocus.current = document.querySelector('.style-dot-hit[aria-pressed="true"]');
-            setStage('open');
+            changeStage('open');
           }
         }}>
         <img src={stage === 'crumpled' ? images[0] : images[1]} alt="" draggable={false} />
       </motion.button>}
 
-    {stage === 'open' && <dialog className="visitor-letter-dialog" ref={dialog} aria-label="Письмо от Данилы" onCancel={event => { event.preventDefault(); setStage('hidden'); }} onClick={event => { if (event.target === event.currentTarget) setStage('hidden'); }}>
+    {stage === 'open' && <dialog className="visitor-letter-dialog" ref={dialog} aria-label="Письмо от Данилы" onCancel={event => { event.preventDefault(); changeStage('hidden'); }} onClick={event => { if (event.target === event.currentTarget) changeStage('hidden'); }}>
       <motion.div className="visitor-letter-paper" initial={{ scale: reduced ? 1 : 0.94 }} animate={{ scale: 1 }} transition={{ duration: reduced ? 0 : 0.18, ease: 'easeOut' }}>
         <img src={images[2]} alt="Дорогой читатель! Если ты читаешь эту записку, значит ты провёл на моём сайте некоторое время. Надеюсь тебе понравилось. Буду рад пообщаться с тобой лично, если конечно ты захочешь. Контакты думаю найдёшь. Ещё раз спасибо! Made with love!" />
-        <button autoFocus type="button" className="control icon-control visitor-letter-close" aria-label="Закрыть письмо" onClick={() => setStage('hidden')}><AnimatedIcon name="close" size={16} /></button>
+        <button autoFocus type="button" className="control icon-control visitor-letter-close" aria-label="Закрыть письмо" onClick={() => changeStage('hidden')}><AnimatedIcon name="close" size={16} /></button>
       </motion.div>
     </dialog>}
   </>, document.body);

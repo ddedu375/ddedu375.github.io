@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import Image from 'next/image';
+import { syncAccentFavicon } from '@/lib/favicon';
 import { AnimatedIcon } from './animated-icon';
-import { AnimatePresence, animate, motion, useAnimationControls, useReducedMotion, type AnimationPlaybackControls } from 'motion/react';
+import { CopyFeedback, FooterContacts, useEmailCopy } from './email-copy';
+import { animate, motion, useAnimationControls, useReducedMotion, type AnimationPlaybackControls } from 'motion/react';
 import { AvitoSticker } from './avito-sticker';
-import { VisitorLetter } from './visitor-letter';
 import { ProjectVideo } from './project-video';
 import { ContactPaper } from './contact-paper';
 import { UnlockCelebration } from './unlock-celebration';
@@ -218,50 +219,6 @@ function CharacterVideoLayer({ source, active, visible, locked, slowEnd, onReady
   );
 }
 
-function useEmailCopy() {
-  const [emailState, setEmailState] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
-  const copyingEmail = useRef(false);
-  useEffect(() => {
-    if (emailState !== 'copied' && emailState !== 'error') return;
-    const timeout = window.setTimeout(() => setEmailState('idle'), 2000);
-    return () => window.clearTimeout(timeout);
-  }, [emailState]);
-
-  async function copyEmail() {
-    if (copyingEmail.current) return;
-    copyingEmail.current = true;
-    setEmailState('copying');
-    try {
-      await navigator.clipboard.writeText(profile.email);
-      setEmailState('copied');
-      playUISound('click');
-      return true;
-    } catch {
-      setEmailState('error');
-    } finally {
-      copyingEmail.current = false;
-    }
-  }
-
-  return { state: emailState, copy: copyEmail };
-}
-
-function CopyFeedback({ text, slide = false }: { text: string; slide?: boolean }) {
-  const reducedMotion = useReducedMotion();
-  return (
-    <span className="copy-feedback" aria-live="polite" aria-atomic="true">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.span key={text}
-          initial={{ opacity: 0, y: slide && !reducedMotion ? 8 : 0 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: slide && !reducedMotion ? -8 : 0, transition: { duration: reducedMotion ? 0 : 0.1, ease: 'easeOut' } }}
-          transition={{ duration: reducedMotion ? 0 : slide ? 0.18 : 0.14, ease: 'easeOut' }}
-        >{text}</motion.span>
-      </AnimatePresence>
-    </span>
-  );
-}
-
 function Notifications() {
   const { toasts } = useToastManager();
   return (
@@ -347,7 +304,6 @@ function PortfolioContent() {
       window.removeEventListener('keydown', unlock, true);
     };
   }, []);
-  const footerEmail = useEmailCopy();
   const contactEmail = useEmailCopy();
   const [paperReset, setPaperReset] = useState(0);
   const [navigation, setNavigation] = useState({
@@ -480,31 +436,9 @@ function PortfolioContent() {
     const root = document.documentElement;
     root.classList.add('skin-changing');
     root.dataset.skin = current.id;
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 32;
-    const context = canvas.getContext('2d');
-    let faviconFrame = 0;
-    const faviconStart = performance.now();
-    const updateFavicon = () => {
-      if (!context) return;
-      context.clearRect(0, 0, 32, 32);
-      context.fillStyle = getComputedStyle(root).getPropertyValue('--accent').trim();
-      context.beginPath();
-      context.arc(16, 16, 14, 0, Math.PI * 2);
-      context.fill();
-      let icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (!icon) {
-        icon = document.createElement('link');
-        icon.rel = 'icon';
-        document.head.appendChild(icon);
-      }
-      icon.type = 'image/png';
-      icon.href = canvas.toDataURL('image/png');
-      if (performance.now() - faviconStart < 400) faviconFrame = requestAnimationFrame(updateFavicon);
-    };
-    updateFavicon();
+    const stopFavicon = syncAccentFavicon();
     const timeout = window.setTimeout(() => root.classList.remove('skin-changing'), 350);
-    return () => { cancelAnimationFrame(faviconFrame); window.clearTimeout(timeout); root.classList.remove('skin-changing'); };
+    return () => { stopFavicon(); window.clearTimeout(timeout); root.classList.remove('skin-changing'); };
   }, [current.id]);
   const isUnlocked = prefs.unlocked.includes(current.id);
   useEffect(() => {
@@ -532,14 +466,14 @@ function PortfolioContent() {
         className={`control primary-control ${compact ? 'compact-control' : 'main-control'}`}>
         <CopyFeedback slide text={contactEmail.state === 'copied' ? 'Скопировано' : contactEmail.state === 'error' ? 'Не удалось' : 'Почта'} />
       </button>
-      <a href={profile.resumeUrl} target="_blank" rel="noreferrer" onClick={() => playUISound('click')}
+      <a href={`${profile.resumeUrl}?style=${current.id}`} onClick={() => playUISound('click')}
         className={`control resume-control ${compact ? 'compact-control' : 'main-control'}`}>Посмотреть резюме</a>
     </>
   );
 
   return (
     <>
-      <main className="portfolio">
+      <main className="portfolio site-container">
         <section
           className="intro"
           id="about"
@@ -663,20 +597,11 @@ function PortfolioContent() {
               setPrefs((previous) => unlockMessage(previous));
               showUnlockToast();
             }} />
-            <div className="footer-links">
-              <button type="button" className="footer-copy" onClick={footerEmail.copy} disabled={footerEmail.state === 'copying'}>
-                <span className="footer-copy-sizer" aria-hidden="true">Скопировать почту</span>
-                <CopyFeedback slide text={footerEmail.state === 'copied' ? 'Скопировано' : footerEmail.state === 'error' ? 'Не удалось' : 'Скопировать почту'} />
-              </button>
-              <a href={profile.telegramUrl} target="_blank" rel="noreferrer">Telegram</a>
-              <span className="footer-divider" aria-hidden="true" />
-              <a href={profile.resumeUrl} target="_blank" rel="noreferrer">CV</a>
-            </div>
+            <FooterContacts resumeHref={`${profile.resumeUrl}?style=${current.id}`} />
           </footer>
         </section>
       </main>
       <Notifications />
-      <VisitorLetter />
     </>
   );
 }
