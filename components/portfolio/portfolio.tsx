@@ -130,6 +130,31 @@ function CharacterVideoLayer({ source, active, visible, locked, slowEnd, onReady
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !active) return;
+    let starting = false;
+    const start = () => {
+      if (starting || document.hidden || video.ended || !video.paused) return;
+      video.muted = true;
+      video.defaultMuted = true;
+      starting = true;
+      void video.play().catch(() => {
+        // Safari may require a user gesture; retry on the next touch.
+      }).finally(() => { starting = false; });
+    };
+    video.addEventListener('canplay', start);
+    document.addEventListener('visibilitychange', start);
+    document.addEventListener('touchend', start, { passive: true });
+    document.addEventListener('click', start);
+    start();
+    return () => {
+      video.removeEventListener('canplay', start);
+      document.removeEventListener('visibilitychange', start);
+      document.removeEventListener('touchend', start);
+      document.removeEventListener('click', start);
+    };
+  }, [source, active]);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !active) return;
     const markReady = () => {
       if (decodedFrame.current !== null) return;
       if (video.requestVideoFrameCallback && !video.paused && !video.ended) {
