@@ -67,7 +67,7 @@ export function readPreferences(raw: string | null): Preferences {
     }
     return {
       unlockVersion: 3,
-      theme: value?.theme === 'dark' ? 'dark' : 'light',
+      theme: 'light',
       unlocked,
       character: unlocked.includes(value?.character) ? value.character : 'character-2',
     };

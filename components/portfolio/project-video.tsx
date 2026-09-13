@@ -63,6 +63,7 @@ export function ProjectVideo({ source, poster, label }: { source: string; poster
   return <div className="project-video-frame" ref={frame}>
     <video ref={inline} className="case-media project-video" src={source} poster={poster} width={1080} height={1080} autoPlay muted loop playsInline preload="metadata" aria-label={`Видео проекта ${label}`} />
     <button ref={trigger} className="project-video-open" aria-label={`Развернуть видео ${label}`} onClick={() => {
+      if (window.matchMedia('(max-width: 1023px)').matches) return;
       const from = rect();
       const size = Math.min(document.documentElement.clientWidth - 32, window.innerHeight - 48, 1000);
       const height = size * from.height / from.width;

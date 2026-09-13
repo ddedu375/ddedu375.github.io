@@ -1665,7 +1665,7 @@ html {
 
 /* Inline character selection replaces the customization dialog. */
 .portrait > video[data-locked="true"],
-.portrait > .character-video-poster[data-locked="true"] { filter: blur(6px); }
+.portrait > .character-video-poster[data-locked="true"] { filter: blur(8px); }
 @media (max-width: 1023px) {
   .sticky-header .sticky-inner { flex-wrap: wrap; gap: 12px; }
   .sticky-header .sticky-actions { width: 100%; margin-left: 0; flex-wrap: wrap; }
@@ -1696,4 +1696,8 @@ html {
 .locked-portrait-overlay { overflow: hidden; border-radius: 12px; transition: opacity 180ms ease-out; }
 @media (prefers-reduced-motion: reduce) {
   .locked-portrait-overlay { transition: none; }
+}
+
+@media (max-width: 1023px) {
+  .project-video-open { display: none; }
 }
