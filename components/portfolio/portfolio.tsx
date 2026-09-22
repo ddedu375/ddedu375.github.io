@@ -318,6 +318,7 @@ function PortfolioContent() {
 
   const swipeStart = useRef<{ id: number; x: number; y: number } | null>(null);
   const [prefs, setPrefs] = usePreferences();
+  const [debugTheme, setDebugTheme] = useState<'light' | 'dark'>('light');
   useEffect(() => {
     const unlock = () => { void unlockUISound(); };
     window.addEventListener('touchend', unlock, { capture: true, passive: true });
@@ -364,11 +365,13 @@ function PortfolioContent() {
   useEffect(() => {
     const debugToast = (event: KeyboardEvent) => {
       if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey || event.repeat) return;
-      if (event.code !== 'KeyU' && event.code !== 'Backspace') return;
+      if (event.code !== 'KeyU' && event.code !== 'KeyD' && event.code !== 'Backspace') return;
       const target = event.target;
       if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"]')) return;
       event.preventDefault();
-      if (event.code === 'KeyU') {
+      if (event.code === 'KeyD') {
+        setDebugTheme(previous => previous === 'light' ? 'dark' : 'light');
+      } else if (event.code === 'KeyU') {
         showUnlockToast();
       } else {
         clearTimeout(toastDelay.current);
@@ -413,9 +416,10 @@ function PortfolioContent() {
   useEffect(() => {
     const root = document.documentElement;
     const changing =
-      root.dataset.theme !== undefined && root.dataset.theme !== prefs.theme;
+      root.dataset.theme !== undefined && root.dataset.theme !== debugTheme;
     if (changing) root.classList.add('theme-changing');
-    root.dataset.theme = prefs.theme;
+    root.dataset.theme = debugTheme;
+    const stopFavicon = syncAccentFavicon();
     const timeout = window.setTimeout(
       () => root.classList.remove('theme-changing'),
       350,
@@ -423,8 +427,9 @@ function PortfolioContent() {
     return () => {
       window.clearTimeout(timeout);
       root.classList.remove('theme-changing');
+      stopFavicon();
     };
-  }, [prefs.theme]);
+  }, [debugTheme]);
   useEffect(() => {
     const update = () => {
       const entries = projects.map((project) => ({
@@ -549,8 +554,8 @@ function PortfolioContent() {
             <CharacterVideo
               locked={!isUnlocked}
               className={`portrait${isUnlocked ? '' : ' is-locked'}`}
-              source={prefs.theme === 'dark' ? current?.darkVideo ?? current?.video ?? profile.defaultDarkVideo : current?.video ?? profile.defaultVideo}
-              poster={prefs.theme === 'dark' ? current?.darkPoster ?? current?.poster ?? profile.defaultDarkPoster : current?.poster ?? profile.defaultPoster}
+              source={debugTheme === 'dark' ? current?.darkVideo ?? current?.video ?? profile.defaultDarkVideo : current?.video ?? profile.defaultVideo}
+              poster={debugTheme === 'dark' ? current?.darkPoster ?? current?.poster ?? profile.defaultDarkPoster : current?.poster ?? profile.defaultPoster}
             />
           </div>
           <div className="bio text-block">

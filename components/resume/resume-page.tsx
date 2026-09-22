@@ -100,6 +100,7 @@ export function ResumePage() {
             <p className="resume-job-meta">{job.meta}</p>
             {job.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
             <ul>{job.bullets.map(bullet => <li key={bullet}>{bullet}</li>)}</ul>
+            <p>{job.stack}</p>
           </article>)}
         </section>
       </>}

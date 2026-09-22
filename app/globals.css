@@ -439,8 +439,11 @@ html[data-skin='character-3'] {
   --accent: #00843d;
   --primary-background: #00843d;
 }
-html[data-theme='dark'][data-skin='corporate'] { --accent: #d0d0d0; }
+html[data-theme='dark'][data-skin='corporate'] { --accent: #d0d0d0; --primary-background: #fff; --primary-edge-color: #00000014; --primary-bottom-color: #00000017; }
+html[data-theme='dark'][data-skin='corporate'] .primary-control { color: #000; }
 html[data-theme='dark'][data-skin='character-3'] { --accent: #42cf7c; }
+html[data-theme='dark'][data-skin='leather'] { --accent: #d8b396; }
+html[data-theme='dark'][data-skin='pink'] { --accent: #ff8eb9; }
 .project {
   scroll-margin-top: 158px;
 }
