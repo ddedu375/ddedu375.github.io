@@ -96,11 +96,14 @@ export function ResumePage() {
         <section className="resume-section" aria-labelledby="resume-experience">
           <h2 id="resume-experience">Опыт работы <span className="secondary">3 года 2 месяца</span></h2>
           {content.jobs.map(job => <article className="resume-job" key={job.name}>
-            <h3>{job.name}</h3>
-            <p className="resume-job-meta">{job.meta}</p>
-            {job.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+            <header className="resume-job-header">
+              <h3>{job.name}<span className="resume-job-role"> — {job.meta.split(' · ')[0]}</span></h3>
+              <p className="resume-job-dates">{job.meta.split(' · ')[1]}</p>
+            </header>
+            <p className="resume-job-meta">{job.paragraphs[0]}</p>
+            {job.paragraphs.slice(1).map(paragraph => <p className="resume-job-description" key={paragraph}>{paragraph}</p>)}
             <ul>{job.bullets.map(bullet => <li key={bullet}>{bullet}</li>)}</ul>
-            <p>{job.stack}</p>
+            <p className="resume-job-stack">{job.stack}</p>
           </article>)}
         </section>
       </>}

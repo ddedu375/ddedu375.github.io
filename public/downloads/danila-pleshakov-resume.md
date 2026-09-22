@@ -2,13 +2,17 @@
 
 Продуктовый дизайнер / Middle Product Designer
 
-Москва · Готов к удалённой работе и командировкам
+Москва · Готов к удалённой работе и командировкам · Опыт 3 года 2 месяца
 
 +7 914 317-48-20 · ddedu.production@gmail.com
 
-Telegram: [@daniladedu](https://t.me/daniladedu)
+Telegram: [@daniladedu](https://t.me/daniladedu) · Портфолио: [https://dpleshakov.vercel.app/](https://dpleshakov.vercel.app/)
 
-Портфолио: [https://dpleshakov.vercel.app/](https://dpleshakov.vercel.app/)
+- Figma
+- UX-исследования
+- Дизайн-системы
+- Прототипирование
+- Product Design
 
 ![Фотография Данилы Плешакова](portrait.jpg)
 
