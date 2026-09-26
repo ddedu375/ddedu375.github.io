@@ -6,6 +6,11 @@
   "cleanUrls": true,
   "redirects": [
     {
+      "source": "/",
+      "destination": "https://dpleshakov.ru/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "destination": "https://dpleshakov.ru/:path*",
       "permanent": true
