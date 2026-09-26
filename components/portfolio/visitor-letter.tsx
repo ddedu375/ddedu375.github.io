@@ -30,7 +30,21 @@ export function VisitorLetter() {
   const [flight, setFlight] = useState({ left: 24, top: 160, x: 0, y: -500, rotation: -160, id: 0 });
   const dialog = useRef<HTMLDialogElement>(null);
   const seen = useRef(false);
-  const loaded = useRef<Promise<void>>(Promise.resolve());
+  const loaded = useRef<Promise<void> | null>(null);
+  const loadImages = useCallback(() => {
+    if (!loaded.current) {
+      loaded.current = Promise.all(images.map(src => new Promise<void>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('Letter image failed to load'));
+        image.src = src;
+      }))).then(() => {}).catch(error => {
+        loaded.current = null;
+        throw error;
+      });
+    }
+    return loaded.current;
+  }, []);
   const reduced = useReducedMotion();
   const previousFocus = useRef<HTMLElement | null>(null);
   const show = useCallback(() => {
@@ -76,20 +90,16 @@ export function VisitorLetter() {
     } catch { /* Without storage, keep the timer for the current page. */ }
     let timer: ReturnType<typeof setTimeout> | undefined;
     try { seen.current = localStorage.getItem(seenKey) === '1'; } catch { /* Storage is optional. */ }
-    loaded.current = Promise.all(images.map(src => new Promise<void>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve();
-      image.onerror = () => reject(new Error('Letter image failed to load'));
-      image.src = src;
-    }))).then(() => {});
-    // Keep load errors handled even when no letter is requested yet.
-    void loaded.current.catch(() => {});
+    // Prepare shortly before arrival, without competing with the first screen.
+    const preloadTimer = !seen.current ? setTimeout(() => {
+      if (alive && !seen.current) void loadImages().catch(() => {});
+    }, Math.max(0, deadline - Date.now() - 30_000)) : undefined;
     try {
       const saved = JSON.parse(sessionStorage.getItem(activeKey) ?? 'null') as SavedLetter | null;
       if (saved?.path === pathname && ['crumpled', 'partial', 'open'].includes(saved.stage) &&
           saved.flight && Object.values(saved.flight).length === 6 && Object.values(saved.flight).every(Number.isFinite)) {
         seen.current = true;
-        void loaded.current.then(() => {
+        void loadImages().then(() => {
           if (!alive) return;
           setOwnerPath(pathname);
           setFlight(saved.flight);
@@ -104,7 +114,7 @@ export function VisitorLetter() {
         timer = setTimeout(arrive, 1000);
         return;
       }
-      void loaded.current.then(() => {
+      void loadImages().then(() => {
         try { if (localStorage.getItem(seenKey) === '1') seen.current = true; } catch { /* Storage is optional. */ }
         if (alive && !seen.current && !document.hidden) show();
       }).catch(() => {});
@@ -123,7 +133,7 @@ export function VisitorLetter() {
       if (document.querySelector('dialog[open]')) return;
       event.preventDefault();
       clearTimeout(timer);
-      void loaded.current.then(() => { if (alive) show(); }).catch(() => {});
+      void loadImages().then(() => { if (alive) show(); }).catch(() => {});
     };
     const storage = (event: StorageEvent) => {
       if (event.key === seenKey && event.newValue === '1') { seen.current = true; clearTimeout(timer); }
@@ -134,12 +144,13 @@ export function VisitorLetter() {
     window.addEventListener('storage', storage);
     return () => {
       alive = false;
+      clearTimeout(preloadTimer);
       clearTimeout(timer);
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('storage', storage);
     };
-  }, [show, pathname]);
+  }, [show, pathname, loadImages]);
 
   useEffect(() => {
     if (stage !== 'open' || ownerPath !== pathname) return;

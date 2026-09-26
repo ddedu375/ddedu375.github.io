@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useAnimationControls, useReducedMotion } from 'motion/react';
 import { AnimatedIcon } from './animated-icon';
@@ -13,12 +13,41 @@ export function ProjectVideo({ source, poster, label }: { source: string; poster
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [origin, setOrigin] = useState<Bounds | null>(null);
+  const [loadMedia, setLoadMedia] = useState(false);
   const closing = useRef(false);
   const [isClosing, setIsClosing] = useState(false);
   const controls = useAnimationControls();
   const reduced = useReducedMotion();
   const target = useRef<Bounds>({ left: 0, top: 0, width: 0, height: 0 });
   const restorePage = useRef(() => {});
+  useEffect(() => {
+    const video = inline.current;
+    const container = frame.current;
+    if (!video || !container) return;
+    let nearby = false;
+    const syncPlayback = () => {
+      if (document.hidden || (!nearby && !origin)) {
+        video.pause();
+      } else {
+        setLoadMedia(true);
+        video.muted = true;
+        void video.play().catch(() => {});
+      }
+    };
+    // Keep the decoded video when scrolling back; only defer its first request.
+    const observer = new IntersectionObserver(([entry]) => {
+      nearby = entry.isIntersecting;
+      syncPlayback();
+    }, { rootMargin: '200px 0px' });
+    observer.observe(container);
+    video.addEventListener('canplay', syncPlayback);
+    document.addEventListener('visibilitychange', syncPlayback);
+    return () => {
+      observer.disconnect();
+      video.removeEventListener('canplay', syncPlayback);
+      document.removeEventListener('visibilitychange', syncPlayback);
+    };
+  }, [origin]);
   const rect = () => {
     const r = frame.current!.getBoundingClientRect();
     return { left: r.left, top: r.top, width: r.width, height: r.height };
@@ -61,7 +90,7 @@ export function ProjectVideo({ source, poster, label }: { source: string; poster
     };
   }, [origin]);
   return <div className="project-video-frame" ref={frame}>
-    <video ref={inline} className="case-media project-video" src={source} poster={poster} width={1080} height={1080} autoPlay muted loop playsInline preload="metadata" aria-label={`Видео проекта ${label}`} />
+    <video ref={inline} className="case-media project-video" src={loadMedia ? source : undefined} poster={poster} width={1080} height={1080} autoPlay muted loop playsInline preload="metadata" aria-label={`Видео проекта ${label}`} />
     <button ref={trigger} className="project-video-open" aria-label={`Развернуть видео ${label}`} onClick={() => {
       if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
       const from = rect();
