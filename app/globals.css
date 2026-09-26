@@ -1921,3 +1921,21 @@ html:has(.resume-screen[data-mode='agent']) { background: #101411; color-scheme:
  .site-container,
  .resume-page { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
 }
+
+.paper-scratch-hint {
+  position: absolute;
+  top: 50%;
+  left: calc(100% - 24px);
+  transform: translateY(-50%);
+  color: var(--secondary-text);
+  font: 400 26px/0.85 var(--font-signature), cursive;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.paper-scratch-hint span { display: block; transform: rotate(-4deg); }
+
+body.paper-erasing,
+body.paper-erasing * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}

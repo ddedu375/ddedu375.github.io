@@ -5,11 +5,13 @@ import { createScratchSound } from '@/lib/scratch-sound';
 
 type Point = { x: number; y: number };
 
-export function usePaperEraser(onReveal: () => void) {
+export function usePaperEraser(onReveal: () => void, onScratch?: () => void) {
   const [canReplay, setCanReplay] = useState(false);
-  const restore = useRef<() => void>(() => {});
+  const restore = useRef<(quiet?: boolean) => void>(() => {});
   const surface = useRef<HTMLButtonElement>(null);
   const coating = useRef<HTMLDivElement>(null);
+  const scratchCallback = useRef(onScratch);
+  useEffect(() => { scratchCallback.current = onScratch; }, [onScratch]);
   const revealCallback = useRef(onReveal);
   useEffect(() => { revealCallback.current = onReveal; }, [onReveal]);
 
@@ -23,6 +25,7 @@ export function usePaperEraser(onReveal: () => void) {
     const sound = createScratchSound();
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     const particles = new Set<HTMLElement>();
+    let erasing = false;
     let previous: Point | null = null;
     let pending: PointerEvent | null = null;
     let frame = 0;
@@ -144,46 +147,62 @@ export function usePaperEraser(onReveal: () => void) {
       previous = point;
       paintMask();
       if (fresh) {
+        scratchCallback.current?.();
         checkProgress();
         if (!reduced.matches) sound.play();
         emitParticles(event);
       }
     };
     const move = (event: PointerEvent) => {
-      if ((event.buttons & 1) === 0) return;
+      if (!erasing || (event.buttons & 1) === 0) return;
+      event.preventDefault();
       pending = event;
       if (!frame) frame = requestAnimationFrame(erase);
     };
     const down = (event: PointerEvent) => {
       if (event.button !== 0) return;
+      event.preventDefault();
+      erasing = true;
+      document.body.classList.add('paper-erasing');
+      window.getSelection()?.removeAllRanges();
       previous = null;
       area.setPointerCapture(event.pointerId);
       move(event);
     };
     const reset = () => {
+      erasing = false;
+      document.body.classList.remove('paper-erasing');
       if (frame) cancelAnimationFrame(frame);
       frame = 0; pending = null; previous = null;
     };
-    restore.current = () => {
+    restore.current = (quiet = false) => {
       reset();
       revealed = false;
       context.globalCompositeOperation = 'source-over';
       context.fillStyle = '#fff';
       context.fillRect(0, 0, mask.width, mask.height);
-      paintMask(true);
+      paintMask(!quiet);
       setCanReplay(false);
       area.setAttribute('aria-label', 'Сотрите бумажку пальцем или с зажатой кнопкой мыши, чтобы открыть стиль. Или нажмите Enter.');
-      area.focus({ preventScroll: true });
+      if (!quiet) area.focus({ preventScroll: true });
+      else if (document.activeElement === area) area.blur();
     };
     const reveal = (event: KeyboardEvent) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
+      scratchCallback.current?.();
       context.clearRect(0, 0, mask.width, mask.height);
       paintMask();
       revealed = true;
       checkProgress();
       area.setAttribute('aria-label', 'special for you, сердечко');
     };
+    const preventSelection = (event: Event) => { if (erasing) event.preventDefault(); };
+    const onVisibility = () => { if (document.hidden) reset(); };
+    document.addEventListener('selectstart', preventSelection);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', reset);
+    area.addEventListener('lostpointercapture', reset);
     area.addEventListener('pointermove', move);
     area.addEventListener('pointerdown', down);
     area.addEventListener('pointerleave', reset);
@@ -195,6 +214,10 @@ export function usePaperEraser(onReveal: () => void) {
       restore.current = () => {};
       reset(); observer.disconnect(); sound.dispose();
       particles.forEach((particle) => particle.remove());
+      document.removeEventListener('selectstart', preventSelection);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', reset);
+      area.removeEventListener('lostpointercapture', reset);
       area.removeEventListener('pointermove', move);
       area.removeEventListener('pointerdown', down);
       area.removeEventListener('pointerleave', reset);
@@ -203,5 +226,5 @@ export function usePaperEraser(onReveal: () => void) {
       area.removeEventListener('keydown', reveal);
     };
   }, []);
-  return { surface, coating, canReplay, replay: () => restore.current() };
+  return { surface, coating, canReplay, replay: (quiet = false) => restore.current(quiet) };
 }

@@ -1,14 +1,58 @@
 'use client';
 
 import { PaperTexture } from '@paper-design/shaders-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { usePaperEraser } from './use-paper-eraser';
+import { preferenceKey, readPreferences } from '@/lib/portfolio';
 import { playUISound } from '@/lib/ui-sounds.js';
 
 export function ContactPaper({ onReveal }: { onReveal: () => void }) {
-  const { surface, coating, canReplay, replay } = usePaperEraser(onReveal);
+  const [hintEligible, setHintEligible] = useState(false);
+  const [hintVisible, setHintVisible] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const [debugHint, setDebugHint] = useState(false);
+  const scratchRecorded = useRef(false);
+  const dismissHint = useCallback(() => {
+    if (scratchRecorded.current) return;
+    scratchRecorded.current = true;
+    setHintEligible(false);
+    setDebugHint(false);
+    try { localStorage.setItem('portfolio-scratch-learned-v1', '1'); } catch {}
+  }, []);
+  const { surface, coating, canReplay, replay } = usePaperEraser(onReveal, dismissHint);
+  useEffect(() => {
+    try {
+      const alreadyUnlocked = readPreferences(localStorage.getItem(preferenceKey)).unlocked.includes('character-3');
+      setHintEligible(!alreadyUnlocked && localStorage.getItem('portfolio-scratch-learned-v1') !== '1');
+    } catch { setHintEligible(true); }
+    const media = window.matchMedia('(hover: none) and (pointer: coarse)');
+    const sync = () => setMobile(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || entry.intersectionRatio < 0.8) return;
+      setHintVisible(true);
+      observer.disconnect();
+    }, { threshold: 0.8 });
+    if (surface.current) observer.observe(surface.current);
+    return () => { observer.disconnect(); media.removeEventListener('change', sync); };
+  }, [surface]);
+  useEffect(() => {
+    const debug = (event: KeyboardEvent) => {
+      if (!event.ctrlKey || !event.shiftKey || event.metaKey || event.altKey || event.repeat || event.code !== 'KeyE') return;
+      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      event.preventDefault();
+      replay(true);
+      scratchRecorded.current = false;
+      setHintEligible(true);
+      setDebugHint(true);
+      surface.current?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    };
+    window.addEventListener('keydown', debug);
+    return () => window.removeEventListener('keydown', debug);
+  }, [replay, surface]);
   const [replaying, setReplaying] = useState(false);
   const reducedMotion = useReducedMotion();
   return (
@@ -43,6 +87,17 @@ export function ContactPaper({ onReveal }: { onReveal: () => void }) {
       <span className="paper-note-label">made with love</span>
       </div>
     </button>
+    <AnimatePresence>
+      {hintEligible && hintVisible && (mobile || debugHint) && <motion.div
+        key="scratch-hint"
+        className="paper-scratch-hint"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: reducedMotion ? 0 : 0.3, ease: 'easeOut' } }}
+        transition={{ duration: reducedMotion ? 0 : 0.3, ease: 'easeOut' }}
+      >
+        <span>Попробуй<br />стереть</span>
+      </motion.div>}
+    </AnimatePresence>
     <AnimatePresence>
       {(canReplay || replaying) && <motion.button
         type="button"
