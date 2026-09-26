@@ -29,12 +29,17 @@ export function ProjectVideo({ source, poster, label }: { source: string; poster
       if (document.hidden || (!nearby && !origin)) {
         video.pause();
       } else {
-        setLoadMedia(true);
         video.muted = true;
         void video.play().catch(() => {});
       }
     };
-    // Keep the decoded video when scrolling back; only defer its first request.
+    // Start buffering the next card before it reaches a mobile viewport.
+    const preloadObserver = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setLoadMedia(true);
+      preloadObserver.disconnect();
+    }, { rootMargin: window.matchMedia('(pointer: coarse)').matches ? '1000px 0px' : '200px 0px' });
+    preloadObserver.observe(container);
     const observer = new IntersectionObserver(([entry]) => {
       nearby = entry.isIntersecting;
       syncPlayback();
@@ -43,6 +48,7 @@ export function ProjectVideo({ source, poster, label }: { source: string; poster
     video.addEventListener('canplay', syncPlayback);
     document.addEventListener('visibilitychange', syncPlayback);
     return () => {
+      preloadObserver.disconnect();
       observer.disconnect();
       video.removeEventListener('canplay', syncPlayback);
       document.removeEventListener('visibilitychange', syncPlayback);
@@ -90,7 +96,7 @@ export function ProjectVideo({ source, poster, label }: { source: string; poster
     };
   }, [origin]);
   return <div className="project-video-frame" ref={frame}>
-    <video ref={inline} className="case-media project-video" src={loadMedia ? source : undefined} poster={poster} width={1080} height={1080} autoPlay muted loop playsInline preload="metadata" aria-label={`Видео проекта ${label}`} />
+    <video ref={inline} className="case-media project-video" src={loadMedia ? source : undefined} poster={poster} width={1080} height={1080} muted loop playsInline preload="auto" aria-label={`Видео проекта ${label}`} />
     <button ref={trigger} className="project-video-open" aria-label={`Развернуть видео ${label}`} onClick={() => {
       if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
       const from = rect();

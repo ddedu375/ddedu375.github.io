@@ -59,6 +59,29 @@ function CharacterVideo({ source, poster, locked = false, className, slowEnd = t
     const timeout = setTimeout(() => setRevealSource(source), 180);
     return () => clearTimeout(timeout);
   }, [source]);
+  useEffect(() => {
+    if (!source || readySource !== source) return;
+    const index = characters.findIndex(character => character.video === source || character.darkVideo === source);
+    if (index < 0) return;
+    let cancelled = false;
+    const dark = source.includes('dark');
+    // Warm only adjacent stills after the current character has decoded.
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        for (const offset of [1, -1]) {
+          if (cancelled) return;
+          const character = characters[(index + offset + characters.length) % characters.length];
+          const url = dark ? character.darkPoster ?? character.poster : character.poster;
+          if (!url) continue;
+          const image = new window.Image();
+          image.fetchPriority = 'low';
+          image.src = url;
+          await image.decode().catch(() => {});
+        }
+      })();
+    }, 500);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [source, readySource]);
   const canReveal = revealSource === source;
   const pending = source !== shown.source;
   const fading = pending && canReveal && readySource === source;
