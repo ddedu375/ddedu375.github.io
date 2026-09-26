@@ -274,7 +274,12 @@ kbd {
 }
 .case figcaption {
   width: 100%;
+  text-wrap: pretty;
   margin-top: calc(16px * var(--entrance-spacing, 1));
+}
+#comparison figcaption,
+#promotion figcaption {
+  text-wrap: wrap;
 }
 .case figcaption p + p {
   margin-top: 12px;
