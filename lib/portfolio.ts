@@ -44,10 +44,10 @@ export const description =
   'Весь последний год работал над улучшением опыта использования статистики в Avito';
 export const projects = [
   { id: 'typer', label: 'Эдит', description: 'Нативная Mac OS мини-апка для исправления, а также чистки текста в любом приложении, собираю сам вместе с ИИ, пока work in progress.\n\nИнтересный факт: под капотом крутится локально могучий Гигачат', video: '/projects/edit.mp4?v=2', poster: '/projects/edit.jpg?v=2' },
-  { id: 'search', label: 'Объявление в поиске', description: 'Задизайнил панель объявлений пользователя прямо в поисковой выдаче, можно смотреть статистику и видеть, как перфомит объявления в любом запросе с своими настройками', video: '/projects/realtime.mp4', poster: '/projects/realtime.jpg' },
-  { id: 'comparison', label: 'Подборка конкурентов', description: 'Пользователям не хватило прозрачности при сравнении с конкурентами. Я концептил раздел, где можно увидеть, кто участвует в сравнении с тобой', video: '/projects/comparison.mp4', poster: '/projects/comparison.jpg' },
-  { id: 'promotion', label: 'Таймлайн продвижения', description: 'Пересобрал компонент активных продвижений у объявления пользователя. Теперь их легче соотносить со своими результатами', video: '/projects/timelines.mp4', poster: '/projects/timelines.jpg' },
-  { id: 'hints', label: 'Подсказки', description: 'Участвовал в редизайне странице позиции в поиске, захотелось наглядно показать пользователям, как работают наши фичи', video: '/projects/hints.mp4', poster: '/projects/hints.jpg' },
+  { id: 'search', label: 'Объявление в поиске', description: 'Панель в поисковой выдаче: подсвечивает объявления пользователя и показывает их статистику. Место в поиске обновляется в реальном времени, а режим инкогнито позволяет в один клик посмотреть на выдачу глазами покупателя.', video: '/projects/realtime.mp4', poster: '/projects/realtime.jpg' },
+  { id: 'comparison', label: 'Подборка конкурентов', description: 'Концепт раздела с подборкой конкурентов пользователя и их статистикой.', video: '/projects/comparison.mp4', poster: '/projects/comparison.jpg' },
+  { id: 'promotion', label: 'Таймлайн продвижения', description: 'Пересобрал отображение услуг продвижения. Пользователи отметили, что теперь проще сопоставлять продвижение с результатами объявления.', video: '/projects/timelines.mp4', poster: '/projects/timelines.jpg' },
+  { id: 'hints', label: 'Подсказки', description: 'Lottie-анимации для обучающих подсказок.', video: '/projects/hints.mp4', poster: '/projects/hints.jpg' },
 ] as const;
 export type Preferences = {
   theme: 'light' | 'dark';
