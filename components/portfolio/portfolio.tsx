@@ -587,7 +587,7 @@ function PortfolioContent() {
               Дизайнер продукта, люблю прорабатывать взаимодействие с интерфейсом
             </p>
             <p className="secondary">
-              Считаю, что дизайн — <span className="avito-label">magic<AvitoSticker path="/animations/magic-sticker.json" size={20} /></span>
+              Считаю, что дизайн — <span className="avito-label">magic<AvitoSticker path="/animations/magic-sticker.json" size={20} /></span>
             </p>
           </div>
           <div className="experience text-block">
