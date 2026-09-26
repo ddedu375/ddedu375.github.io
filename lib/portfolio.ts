@@ -44,7 +44,7 @@ export const description =
   'Весь последний год работал над улучшением опыта использования статистики в Avito';
 export const projects = [
   { id: 'typer', label: 'Эдит', description: 'Нативная Mac OS мини-апка для исправления, а также чистки текста в любом приложении, собираю сам вместе с ИИ, пока work in progress.\n\nИнтересный факт: под капотом крутится локально могучий Гигачат', video: '/projects/edit.mp4?v=2', poster: '/projects/edit.jpg?v=2' },
-  { id: 'search', label: 'Объявление в поиске', description: 'Панель в поисковой выдаче: подсвечивает объявления пользователя и показывает их статистику. Место в поиске обновляется в реальном времени, а режим инкогнито позволяет в один клик посмотреть на выдачу глазами покупателя.', video: '/projects/realtime.mp4', poster: '/projects/realtime.jpg' },
+  { id: 'search', label: 'Объявление в поиске', description: 'Панель в поисковой выдаче: подсвечивает объявления пользователя и показывает их статистику. Режим инкогнито позволяет в один клик посмотреть на выдачу глазами покупателя.', video: '/projects/realtime.mp4', poster: '/projects/realtime.jpg' },
   { id: 'comparison', label: 'Подборка конкурентов', description: 'Концепт раздела с подборкой конкурентов пользователя и их статистикой.', video: '/projects/comparison.mp4', poster: '/projects/comparison.jpg' },
   { id: 'promotion', label: 'Таймлайн продвижения', description: 'Пересобрал отображение услуг продвижения. Пользователи отметили, что теперь проще сопоставлять продвижение с результатами объявления.', video: '/projects/timelines.mp4', poster: '/projects/timelines.jpg' },
   { id: 'hints', label: 'Подсказки', description: 'Lottie-анимации для обучающих подсказок.', video: '/projects/hints.mp4', poster: '/projects/hints.jpg' },
