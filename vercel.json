@@ -3,5 +3,12 @@
   "framework": null,
   "buildCommand": "GITHUB_PAGES=true npm run build",
   "outputDirectory": "dist/client",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://dpleshakov.ru/:path*",
+      "permanent": true
+    }
+  ]
 }
