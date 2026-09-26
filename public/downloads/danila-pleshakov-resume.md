@@ -6,7 +6,7 @@
 
 +7 914 317-48-20 · ddedu.production@gmail.com
 
-Telegram: [@daniladedu](https://t.me/daniladedu) · Портфолио: [dpleshakov.vercel.app](https://dpleshakov.vercel.app/)
+Telegram: [@daniladedu](https://t.me/daniladedu) · Портфолио: [dpleshakov.ru](https://dpleshakov.ru)
 
 - Figma
 - UX-исследования
