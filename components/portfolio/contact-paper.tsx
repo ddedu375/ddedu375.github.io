@@ -11,6 +11,7 @@ import { playUISound } from '@/lib/ui-sounds.js';
 export function ContactPaper({ onReveal }: { onReveal: () => void }) {
   const [hintEligible, setHintEligible] = useState(false);
   const [hintVisible, setHintVisible] = useState(false);
+  const [hintFontReady, setHintFontReady] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [debugHint, setDebugHint] = useState(false);
   const scratchRecorded = useRef(false);
@@ -39,6 +40,16 @@ export function ContactPaper({ onReveal }: { onReveal: () => void }) {
     if (surface.current) observer.observe(surface.current);
     return () => { observer.disconnect(); media.removeEventListener('change', sync); };
   }, [surface]);
+  useEffect(() => {
+    if (!hintEligible || (!mobile && !debugHint) || !surface.current) return;
+    let cancelled = false;
+    const family = getComputedStyle(surface.current).getPropertyValue('--font-signature').split(',')[0].trim();
+    if (!family) return;
+    void document.fonts.load(`400 26px ${family}`, 'Попробуй стереть').then((faces) => {
+      if (!cancelled && faces.length > 0 && faces.every(face => face.status === 'loaded')) setHintFontReady(true);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [hintEligible, mobile, debugHint, surface]);
   useEffect(() => {
     const debug = (event: KeyboardEvent) => {
       if (!event.ctrlKey || !event.shiftKey || event.metaKey || event.altKey || event.repeat || event.code !== 'KeyE') return;
@@ -88,7 +99,7 @@ export function ContactPaper({ onReveal }: { onReveal: () => void }) {
       </div>
     </button>
     <AnimatePresence>
-      {hintEligible && hintVisible && (mobile || debugHint) && <motion.div
+      {hintEligible && hintVisible && hintFontReady && (mobile || debugHint) && <motion.div
         key="scratch-hint"
         className="paper-scratch-hint"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }}

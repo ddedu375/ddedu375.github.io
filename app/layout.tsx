@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 const signature = Caveat({
   variable: '--font-signature',
   weight: '400',
-  subsets: ['latin'],
+  subsets: ['latin', 'cyrillic'],
 });
 
 export const viewport: Viewport = {
